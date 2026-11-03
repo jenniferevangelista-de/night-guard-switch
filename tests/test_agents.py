@@ -106,6 +106,8 @@ def test_parse_sse():
     assert [e["type"] for e in parse_sse(iter(lines))] == ["message", "connection_state"]
     no_blank_lines = [x for x in lines if x]
     assert [e["type"] for e in parse_sse(iter(no_blank_lines))] == ["message", "connection_state"]
+    control = ["event: connection_state", 'data: {"connection_id": "c1", "rooms": []}', ""]
+    assert next(parse_sse(iter(control)))["type"] == "connection_state"
     split = ['data: {"type":', 'data: "message"}', ""]
     assert [e["type"] for e in parse_sse(iter(split))] == ["message"]
 

@@ -55,9 +55,13 @@ def parse_sse(lines: Iterator[str]) -> Iterator[dict]:
     is also emitted as soon as it is complete JSON (Switch sends one JSON object per event).
     """
     data: list[str] = []
+    name = ""
     for line in lines:
         line = line.rstrip("\r\n")
         if line.startswith(":"):
+            continue
+        if line.startswith("event:"):
+            name = line[6:].strip()  # control frames name themselves here, not in the JSON
             continue
         if line.startswith("data:"):
             data.append(line[5:].strip())
@@ -66,6 +70,9 @@ def parse_sse(lines: Iterator[str]) -> Iterator[dict]:
             except ValueError:
                 continue  # a payload split over several data lines: wait for the rest
             data = []
+            if isinstance(event, dict) and name and "type" not in event:
+                event["type"] = name
+            name = ""
             yield event
             continue
         if line == "" and data:
@@ -172,7 +179,7 @@ class Agent:
                             handle(event)
                         except Exception:  # noqa: BLE001  one bad event must not stop the family's agent
                             log.exception("handler failed")
-            except (httpx.HTTPError, SwitchError) as exc:
+            except Exception as exc:  # noqa: BLE001  keep the connection alive whatever happened
                 if self._stop.is_set():
                     return
                 self.last_error = f"{type(exc).__name__}: {exc}"
