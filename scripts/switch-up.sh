@@ -34,7 +34,7 @@ for _ in $(seq 180); do
 done
 curl -sf localhost:8000/health >/dev/null || { echo "switch-core did not come up"; docker compose -f deploy/local/standalone-docker-compose.yml --project-directory . logs --tail 80 switch; exit 1; }
 for _ in $(seq 90); do
-  docker compose -f deploy/local/standalone-docker-compose.yml --project-directory . --profile collab logs setup 2>&1 | grep -qi "complete" && break
+  docker compose -f deploy/local/standalone-docker-compose.yml --project-directory . --profile collab logs setup 2>&1 | grep -q "Setup complete" && break
   sleep 2
 done
 echo "Switch is up: API http://localhost:8000, Mattermost http://localhost:8065"

@@ -1,0 +1,54 @@
+name: record the demo videos
+# Records the real Mattermost UI on a fresh Switch with Playwright, then lays the narration on top.
+# Started by hand; the two MP4s are uploaded as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      writer:
+        description: "template or github"
+        default: template
+permissions:
+  contents: read
+  models: read
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NG_WRITER: ${{ inputs.writer || 'template' }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core >/dev/null
+          pip install -q edge-tts playwright pillow numpy
+          python -m playwright install --with-deps chromium >/dev/null
+      - name: Narration (Ava)
+        run: python video/script.py
+      - name: Switch v0.31.0 + family + agents
+        run: |
+          scripts/switch-up.sh
+          pip install -q -e .
+          SWITCH_ENV=switch/.env python -m family_room.setup
+          mkdir -p out
+          python -m family_room.helper > out/helper.log 2>&1 &
+          sleep 4
+      - name: Record
+        run: python video/record_demo.py
+      - name: Finish
+        run: python video/finish.py
+      - name: Logs on failure
+        if: failure()
+        run: cat out/helper.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: videos
+          path: |
+            video/out/
+            video/work/*.png
+            video/work/scenes.json
+            out/helper.log

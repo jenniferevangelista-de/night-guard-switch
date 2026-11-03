@@ -80,6 +80,7 @@ class Agent:
         self._room: str | None = None
         self._stop = threading.Event()
         self._ready = threading.Event()
+        self.last_error = ""
         self.cursor: int | None = None
 
     # ── operations ──────────────────────────────────────────────────────────
@@ -167,6 +168,7 @@ class Agent:
             except (httpx.HTTPError, SwitchError) as exc:
                 if self._stop.is_set():
                     return
+                self.last_error = f"{type(exc).__name__}: {exc}"
                 log.warning("stream dropped (%s), reconnecting", exc)
                 time.sleep(2)
 
@@ -178,7 +180,7 @@ class Agent:
         threading.Thread(target=self._stream_forever, args=(handle, client), daemon=True).start()
         threading.Thread(target=self._beat_forever, daemon=True).start()
         if not self._ready.wait(timeout):
-            raise SwitchError("the event stream did not open")
+            raise SwitchError(f"the event stream did not open ({self.last_error or 'no frame received'})")
         return self
 
     def listen(self, handle: Callable[[dict], None], client: str = "night-guard-switch") -> None:
