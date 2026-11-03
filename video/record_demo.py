@@ -86,8 +86,19 @@ class Director:
 
 
 def login(page: Page, mm_url: str, username: str, password: str) -> None:
-    r = page.request.post(f"{mm_url}/api/v4/users/login", data={"login_id": username, "password": password})
+    """Sign in to the local Mattermost as one of the fictional family members (test accounts from setup)."""
+    page.context.clear_cookies()
+    # Mattermost sets the session cookies only for browser-style (XHR) requests.
+    r = page.request.post(f"{mm_url}/api/v4/users/login", data={"login_id": username, "password": password},
+                          headers={"X-Requested-With": "XMLHttpRequest"})
     assert r.ok, r.text()
+    if any(c["name"] == "MMAUTHTOKEN" for c in page.context.cookies()):
+        return
+    page.goto(f"{mm_url}/login")  # fallback: the real login form
+    page.locator("#input_loginId").fill(username)
+    page.locator("#input_password-input").fill(password)
+    page.keyboard.press("Enter")
+    page.wait_for_url(lambda url: "/login" not in url, timeout=30000)
 
 
 COMPOSER = "#post_textbox, [data-testid='post_textbox']"
