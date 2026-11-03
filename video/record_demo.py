@@ -28,10 +28,10 @@ WORK = ROOT / "video" / "work"
 W, H = 1920, 1080
 
 CSS = """
-#ng-cap{position:fixed;left:0;right:0;top:0;z-index:2147483647;background:rgba(15,23,42,.95);color:#fff;
+#ng-cap{pointer-events:none;position:fixed;left:0;right:0;top:0;z-index:2147483647;background:rgba(15,23,42,.95);color:#fff;
  font:600 28px/1.35 Helvetica,Arial,sans-serif;padding:18px 40px 22px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 #ng-cap small{display:block;font-weight:400;font-size:21px;color:#cbd5e1;margin-top:6px}
-#ng-badge{position:fixed;bottom:18px;left:18px;z-index:2147483647;background:#4338ca;color:#fff;
+#ng-badge{pointer-events:none;position:fixed;bottom:18px;left:18px;z-index:2147483647;background:#4338ca;color:#fff;
  font:700 20px Helvetica,Arial,sans-serif;padding:8px 16px;border-radius:999px}
 #ng-card{position:fixed;inset:0;z-index:2147483647;background:linear-gradient(135deg,#0b1026,#312e81);color:#fff;
  display:none;flex-direction:column;justify-content:center;padding:0 140px;font-family:Helvetica,Arial,sans-serif}

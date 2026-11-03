@@ -64,7 +64,7 @@ def _model(system: str, user: str) -> str | None:
 
 STYLE = ("You help a parent after a child-safety alert. Plain words, short sentences, warm and calm, no jargon, "
          "no em dashes, never blame the child, never suggest punishment, never invent phone numbers or links. "
-         "Use only the facts given.")
+         "Use only the facts given. Output only the text itself: no preamble, no notes, no markdown.")
 
 
 def facts(event: dict, child: str) -> str:
