@@ -135,7 +135,7 @@ The transcript of each run is uploaded as an artifact.
 | [`nightguard/signals.py`](nightguard/signals.py): the 13 risk signals, the kid and parent wording and their sources (verbatim) | Everything in [`family_room/`](family_room): the Switch agent protocol client, both agents, the approval workflow, the step writers, setup and the end-to-end check |
 | [`nightguard/detector.py`](nightguard/detector.py): the classifier prompt, schema, evidence checks and severity (verbatim; the model call moved to `family_room/detect.py`) | `scripts/`, the GitHub Actions workflows, the tests, this README and the videos (`video/`: recorded with Playwright on a real Switch, narrated with edge-tts) |
 | [`nightguard/family.py`](nightguard/family.py): the family rules (`apply_rules`, no longer writes a local file) | The Switch setup: rooms, documents, linked rooms, agent registration |
-| [`video/snoozy.py`](video/snoozy.py): Snoozy, Night Guard's mascot, drawn for the Night Guard films (now lip-synced over the new videos) | |
+| [`video/ng/`](video/ng): the drawing helpers, narrator and audio of the Night Guard films, reused for these videos ([how](docs/VIDEOS.md)) | |
 | The fictional chats in [`scenarios/chats.json`](scenarios/chats.json) come from Night Guard's evaluation set (ids noted in the file) | `whatsapp-number` app and contact names, and `just-gaming` |
 
 Each pre-existing file says so in its header. Night Guard won Best Use of Backboard in the DEV x Hacktoberfest 2026 challenge.
