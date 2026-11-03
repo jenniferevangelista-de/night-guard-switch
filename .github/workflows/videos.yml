@@ -50,5 +50,6 @@ jobs:
           path: |
             video/out/
             video/work/*.png
+            video/work/raw/
             video/work/scenes.json
             out/helper.log

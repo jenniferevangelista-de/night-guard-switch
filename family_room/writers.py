@@ -8,9 +8,12 @@ configured (NG_WRITER=template, the default) every text comes from the templates
 
 from __future__ import annotations
 
+import logging
 import os
 
 import httpx
+
+log = logging.getLogger("writers")
 
 GITHUB_MODELS_URL = "https://models.github.ai/inference/chat/completions"
 
@@ -53,7 +56,8 @@ def _model(system: str, user: str) -> str | None:
         r.raise_for_status()
         text = r.json()["choices"][0]["message"]["content"].strip()
         return text.replace("—", ",") or None  # house style: no em dashes
-    except (httpx.HTTPError, KeyError, IndexError, ValueError):
+    except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
+        log.warning("GitHub Models unavailable, using the template (%s: %s)", type(exc).__name__, exc)
         return None
 
 

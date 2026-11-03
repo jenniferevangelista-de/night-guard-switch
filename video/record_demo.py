@@ -90,6 +90,23 @@ def login(page: Page, mm_url: str, username: str, password: str) -> None:
     assert r.ok, r.text()
 
 
+COMPOSER = "#post_textbox, [data-testid='post_textbox']"
+
+
+def open_channel(page: Page, url: str, ready: str = COMPOSER) -> None:
+    """Go to a channel, getting past Mattermost's 'view in app or browser' landing page."""
+    page.goto(url)
+    for _ in range(60):
+        if page.locator(ready).count():
+            break
+        landing = page.get_by_text("View in Browser", exact=False)
+        if landing.count():
+            landing.first.click()
+        page.wait_for_timeout(1000)
+    page.locator(ready).first.wait_for(timeout=30000)
+    page.wait_for_timeout(1200)
+
+
 def wait_text(page: Page, text: str, timeout: float = 90) -> None:
     page.get_by_text(text, exact=False).last.wait_for(timeout=timeout * 1000)
 
@@ -114,9 +131,12 @@ def main() -> None:
                                   record_video_size={"width": W, "height": H})
         page = ctx.new_page()
         login(page, mm_url, "mom", pw["mom"])
-        page.goto(f"{mm_url}/{team}/channels/{family['name']}")
-        page.locator("#post_textbox, [data-testid='post_textbox']").first.wait_for(timeout=60000)
-        page.wait_for_timeout(1500)
+        try:
+            open_channel(page, f"{mm_url}/{team}/channels/{family['name']}")
+        except Exception:
+            page.screenshot(path=str(WORK / "fail.png"))
+            print("landed on", page.url, page.title())
+            raise
         d = Director(page, voice)
         d.overlay()
         d.set_badge("Signed in as mom")
@@ -142,7 +162,7 @@ def main() -> None:
 
         def approve():
             d.set_caption("3 · Mom approves in the thread", "@family-helper approve 1 3 4")
-            page.locator("#post_textbox, [data-testid='post_textbox']").first.click()
+            page.locator(COMPOSER).first.click()
             page.keyboard.press("Shift+ArrowUp")  # reply to the latest message: opens the alert's thread
             box = page.locator("#reply_textbox, [data-testid='reply_textbox']").first
             box.wait_for(timeout=15000)
@@ -172,9 +192,8 @@ def main() -> None:
         def child():
             d.set_caption("6 · Lia's own room", "The child is always told when something is shared")
             login(page, mm_url, "lia", pw["lia"])  # same page, so the recording stays one take
-            page.goto(f"{mm_url}/{team}/channels/{state['rooms']['child']['name']}")
+            open_channel(page, f"{mm_url}/{team}/channels/{state['rooms']['child']['name']}")
             page.get_by_text("NOT in trouble", exact=False).last.wait_for(timeout=60000)
-            page.wait_for_timeout(800)
             d.overlay()
             d.set_badge("Signed in as Lia")
             page.mouse.wheel(0, 4000)
@@ -182,9 +201,7 @@ def main() -> None:
 
         def threat():
             login(page, mm_url, "mom", pw["mom"])
-            page.goto(f"{mm_url}/{team}/channels/{family['name']}")
-            page.locator("#post_textbox, [data-testid='post_textbox']").first.wait_for(timeout=60000)
-            page.wait_for_timeout(800)
+            open_channel(page, f"{mm_url}/{team}/channels/{family['name']}")
             d.overlay()
             d.set_badge("Signed in as mom")
             d.set_caption("7 · Threats or money demands", "SaferNet / NCMEC and the police. Don't pay. Fixed text.")
