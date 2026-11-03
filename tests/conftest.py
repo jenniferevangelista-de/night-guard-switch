@@ -34,6 +34,12 @@ class FakeAgent:
     def load_documents(self, room_id, ids):
         return [{"id": i, "description": "", "content": self.docs[i]["content"]} for i in ids]
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
     def posts_in(self, room):
         return [p for p in self.posts if p["room"] == room]
 

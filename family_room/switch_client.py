@@ -79,6 +79,7 @@ class Agent:
         self._lock = threading.RLock()  # one operation at a time: connect_to_room changes the active room
         self._room: str | None = None
         self._stop = threading.Event()
+        self._ready = threading.Event()
         self.cursor: int | None = None
 
     # ── operations ──────────────────────────────────────────────────────────
@@ -138,9 +139,7 @@ class Agent:
                 except httpx.HTTPError:
                     pass  # the stream loop reconnects; a missed beat is not fatal within the 6 s TTL
 
-    def listen(self, handle: Callable[[dict], None], client: str = "night-guard-switch") -> None:
-        """Deliver every event in the agent's rooms to handle(), reconnecting with the same connection id."""
-        threading.Thread(target=self._beat_forever, daemon=True).start()
+    def _stream_forever(self, handle: Callable[[dict], None] | None, client: str) -> None:
         while not self._stop.is_set():
             url = (f"{self.base_url}/agents/{self.id}/events?connection_id={self.connection_id}"
                    f"&scope=all&filter=all&start_from=head&client={client}")
@@ -152,15 +151,47 @@ class Agent:
                     if r.status_code != 200:
                         raise SwitchError(f"stream {r.status_code}: {r.read()[:200]!r}")
                     for event in parse_sse(r.iter_lines()):
+                        if self._stop.is_set():
+                            return
+                        if event.get("type") == "connection_state":
+                            self._room = None  # a new connection holds no room yet
+                            self._ready.set()
                         if isinstance(event.get("sequence"), int):
                             self.cursor = event["sequence"]
+                        if handle is None:
+                            continue
                         try:
                             handle(event)
-                        except Exception:  # one bad event must not stop the family's agent
+                        except Exception:  # noqa: BLE001  one bad event must not stop the family's agent
                             log.exception("handler failed")
             except (httpx.HTTPError, SwitchError) as exc:
+                if self._stop.is_set():
+                    return
                 log.warning("stream dropped (%s), reconnecting", exc)
                 time.sleep(2)
 
+    def connect(self, handle: Callable[[dict], None] | None = None, client: str = "night-guard-switch",
+                timeout: float = 30) -> Agent:
+        """Open the event stream (operations need a live connection) and start the heartbeat."""
+        self._stop.clear()
+        self._ready.clear()
+        threading.Thread(target=self._stream_forever, args=(handle, client), daemon=True).start()
+        threading.Thread(target=self._beat_forever, daemon=True).start()
+        if not self._ready.wait(timeout):
+            raise SwitchError("the event stream did not open")
+        return self
+
+    def listen(self, handle: Callable[[dict], None], client: str = "night-guard-switch") -> None:
+        """Deliver every event in the agent's rooms to handle(), until stopped."""
+        self.connect(handle, client)
+        while not self._stop.wait(1):
+            pass
+
     def stop(self) -> None:
         self._stop.set()
+
+    def __enter__(self) -> Agent:
+        return self.connect()
+
+    def __exit__(self, *exc) -> None:
+        self.stop()

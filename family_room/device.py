@@ -55,8 +55,14 @@ def run(chat_id: str) -> dict | None:
         print(f"{chat_id}: nothing risky found ({result['analysis_status']}), nothing posted.")
         return None
     me = state["agents"][DEVICE_AGENT]
-    agent = Agent(state["switch_url"], me["id"], me["api_key"], DEVICE_AGENT)
     family, kid_room = state["rooms"]["family"]["id"], state["rooms"]["child"]["id"]
+    with Agent(state["switch_url"], me["id"], me["api_key"], DEVICE_AGENT) as agent:
+        _deliver(agent, event, child, family, kid_room)
+    print(f"{chat_id}: {event['severity']} risk, shared with family: {event['shared']}")
+    return event
+
+
+def _deliver(agent, event: dict, child: str, family: str, kid_room: str) -> None:
     if event["shared"]:
         record = {**event, "child": child}
         doc = agent.create_document(
@@ -66,8 +72,6 @@ def run(chat_id: str) -> dict | None:
         )
         agent.mention(family, alert_text(event, child) + f"\nng-alert {event['id']} doc {doc}", [HELPER_AGENT])
     agent.post(kid_room, child_text(event, child))
-    print(f"{chat_id}: {event['severity']} risk, shared with family: {event['shared']}")
-    return event
 
 
 if __name__ == "__main__":

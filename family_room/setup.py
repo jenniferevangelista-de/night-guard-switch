@@ -94,7 +94,7 @@ def main() -> None:
         users[username] = mm.ensure_user(username, passwords[username], team_id, first)
 
     agents = {name: register_agent(SWITCH, env["AGENT_REGISTRATION_TOKEN"], name, desc) for name, desc in AGENTS.items()}
-    helper = Agent(SWITCH, agents[HELPER_AGENT]["id"], agents[HELPER_AGENT]["api_key"], HELPER_AGENT)
+    helper = Agent(SWITCH, agents[HELPER_AGENT]["id"], agents[HELPER_AGENT]["api_key"], HELPER_AGENT).connect()
     for a in agents.values():
         helper.op("update_agent_detail", agent_id=a["id"], addressing="anyone")
     bridges = helper.op("list_bridges")
@@ -120,6 +120,7 @@ def main() -> None:
     except SwitchError as exc:  # linking is a convenience, not required for the workflow
         print(f"link_rooms skipped: {exc}")
 
+    helper.stop()
     save_state({
         "switch_url": SWITCH, "mattermost_url": MM, "team": env["MATTERMOST_TEAM_NAME"],
         "agents": agents, "rooms": rooms, "parents": PARENTS, "child": CHILD, "passwords": passwords,
