@@ -98,15 +98,15 @@ class Agent:
         self.cursor: int | None = None
 
     # ── operations ──────────────────────────────────────────────────────────
-    def op(self, name: str, **args) -> object:
+    def op(self, operation: str, /, **args) -> object:
         with self._lock:
             r = self._http.post(
-                f"{self.base_url}/agents/{self.id}/ops/{name}",
+                f"{self.base_url}/agents/{self.id}/ops/{operation}",
                 headers={**self._headers, "X-Switch-Connection-Id": self.connection_id},
                 json=args,
             )
             if r.status_code != 200:
-                raise SwitchError(f"{name} failed {r.status_code}: {r.text[:300]}")
+                raise SwitchError(f"{operation} failed {r.status_code}: {r.text[:300]}")
             return r.json()["result"]
 
     def in_room(self, room_id: str) -> None:
