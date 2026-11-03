@@ -14,7 +14,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
-extend-exclude = ["nightguard", "video/snoozy.py"]  # pre-existing Night Guard code, kept as it was
+extend-exclude = ["nightguard", "video/ng", "video/film.py", "video/film_audio.py", "video/film_render.py", "video/tour_build.py"]  # pre-existing Night Guard code, kept as it was
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B"]

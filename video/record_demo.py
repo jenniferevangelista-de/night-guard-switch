@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import subprocess
 import sys
@@ -26,6 +27,7 @@ from family_room.config import load_state  # noqa: E402
 from family_room.setup import Mattermost  # noqa: E402
 
 WORK = ROOT / "video" / "work"
+PLAIN = os.environ.get("CAPTIONS", "0") == "0"  # tour format: titles and subtitles go in the paper frame
 W, H = 1440, 810  # recorded at this size and scaled to 1080p, so the chat text is easy to read
 
 CSS = """
@@ -65,16 +67,22 @@ class Director:
 
     def set_caption(self, title: str, sub: str = "") -> None:
         self.caption = (title, sub)
+        if PLAIN:
+            return
         html = title + (f"<small>{sub}</small>" if sub else "")
         self.page.evaluate("([h]) => {const c=document.getElementById('ng-cap'); if(!c) return;"
                            "c.innerHTML=h; c.style.display=h?'block':'none';}", [html])
 
     def set_badge(self, text: str) -> None:
         self.badge = text
+        if PLAIN:
+            return
         self.page.evaluate("([t]) => {const b=document.getElementById('ng-badge'); if(!b) return;"
                            "b.textContent=t; b.style.display=t?'block':'none';}", [text])
 
     def card(self, tag: str, title: str, lines: list[str], show: bool = True) -> None:
+        if PLAIN:
+            return
         body = f'<span class="tag">{tag}</span><h1>{title}</h1>' + "".join(f"<p>{x}</p>" for x in lines)
         self.page.evaluate("([b, s]) => {const c=document.getElementById('ng-card'); c.innerHTML=b;"
                            "c.style.display=s?'flex':'none';}", [body, show])
