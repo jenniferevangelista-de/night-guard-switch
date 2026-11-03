@@ -101,7 +101,7 @@ def finish_demo() -> Path:
         return sum(max(0.0, min(x, b) - a) for a, b in keep)
 
     length = sum(b - a for a, b in keep)
-    speech = np.zeros(int(length * SR) + SR, np.float32)
+    speech = np.zeros(len(pad(length)), np.float32)
     for s in scenes:
         voice = pcm(WORK / "voice" / f"{s['key']}.mp3")
         start = int((new_time(s["at"]) + 0.3) * SR)
