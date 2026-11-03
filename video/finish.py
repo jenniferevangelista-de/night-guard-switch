@@ -175,16 +175,20 @@ def flow_slide() -> Image.Image:
     img, d = canvas()
     d.text((140, 90), "HOW IT FLOWS", font=font(26, True), fill=AMBER)
     d.text((140, 130), "Switch is in the middle of every step", font=font(58, True), fill=WHITE)
-    boxes = [("Child's computer", "Night Guard + family rules", 140), ("Switch", "agents · rooms · documents", 740),
-             ("Family chat", "parents approve or edit", 1340)]
-    for title, sub, x in boxes:
+    box_w, gap = 460, 150
+    boxes = [("Child's computer", ["Night Guard", "family rules"]), ("Switch", ["agents · rooms", "threads · documents"]),
+             ("Family chat", ["parents approve,", "edit or skip"])]
+    for i, (title, sub) in enumerate(boxes):
+        x = 140 + i * (box_w + gap)
         fill = (67, 56, 202) if title == "Switch" else (30, 27, 75)
-        d.rounded_rectangle([x, 380, x + 440, 620], 28, fill=fill, outline=SOFT, width=3)
-        d.text((x + 32, 430), title, font=font(42, True), fill=WHITE)
-        d.text((x + 32, 500), sub, font=font(30), fill=SOFT)
-    for x in (600, 1200):
-        d.polygon([(x, 485), (x + 120, 500), (x, 515)], fill=AMBER)
-        d.line([(x - 20, 500), (x + 100, 500)], fill=AMBER, width=8)
+        d.rounded_rectangle([x, 370, x + box_w, 630], 28, fill=fill, outline=SOFT, width=3)
+        d.text((x + 34, 410), title, font=font(42, True), fill=WHITE)
+        for j, line in enumerate(sub):
+            d.text((x + 34, 486 + j * 46), line, font=font(32), fill=SOFT)
+        if i < 2:  # arrow in the gap to the next box
+            ax = x + box_w + 22
+            d.line([(ax, 500), (ax + gap - 70, 500)], fill=AMBER, width=8)
+            d.polygon([(ax + gap - 74, 482), (ax + gap - 44, 500), (ax + gap - 74, 518)], fill=AMBER)
     notes = ["Only risk type, app, contact and flagged phrase reach the family room",
              "family-helper writes: talk script · evidence checklist · report text · note to the child",
              "The child is always told, in their own room"]
