@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from snoozy import sloth
 
 HERE = Path(__file__).resolve().parent
 WORK, OUT = HERE / "work", HERE / "out"
@@ -54,20 +55,53 @@ def duration(path: Path) -> float:
     return float(out.strip())
 
 
+FPS = 30
+MASCOT_W, MASCOT_H = 300, 320
+
+
+def mouth_track(speech: np.ndarray, frames: int) -> np.ndarray:
+    """How open Snoozy's mouth is in each video frame: the narration loudness, closed in the pauses."""
+    hop = SR / FPS
+    rms = np.array([np.sqrt(np.mean(speech[int(i * hop): int((i + 1) * hop)] ** 2) + 1e-12) for i in range(frames)])
+    level = rms / (np.percentile(rms[rms > 1e-4], 95) if np.any(rms > 1e-4) else 1)
+    level = np.convolve(level, np.ones(3) / 3, mode="same")
+    return np.where(level > 0.12, np.clip(level, 0, 1), 0.0)
+
+
+def mascot_movie(speech: np.ndarray, seconds: float, path: Path) -> Path:
+    """Snoozy on a transparent background, lip-synced to `speech`, as a video with alpha."""
+    frames = int(seconds * FPS)
+    mouth = mouth_track(speech, frames)
+    proc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s",
+                             f"{MASCOT_W}x{MASCOT_H}", "-r", str(FPS), "-i", "pipe:0", "-c:v", "qtrle", str(path)],
+                            stdin=subprocess.PIPE)
+    for i in range(frames):
+        img = Image.new("RGBA", (MASCOT_W, MASCOT_H), (0, 0, 0, 0))
+        sloth(img, i / FPS, MASCOT_W // 2, MASCOT_H - 6, 290, float(mouth[i]), "talk", 0.0)
+        proc.stdin.write(img.tobytes())
+    proc.stdin.close()
+    proc.wait()
+    return path
+
+
 def finish_demo() -> Path:
     raw = Path(json.loads((WORK / "raw.json").read_text())["video"])
     scenes = json.loads((WORK / "scenes.json").read_text())
-    length = duration(raw)
-    mix = pad(length)
+    cut = max(0.0, scenes[0]["at"] - 0.2)  # drop the sign-in pre-roll before the title card
+    length = duration(raw) - cut
+    speech = np.zeros(int(length * SR), np.float32)
     for s in scenes:
         voice = pcm(WORK / "voice" / f"{s['key']}.mp3")
-        start = int((s["at"] + 0.3) * SR)
-        end = min(len(mix), start + len(voice))
-        mix[start:end] += voice[: end - start]
-    write_wav(mix, WORK / "demo_audio.wav")
+        start = int((s["at"] - cut + 0.3) * SR)
+        end = min(len(speech), start + len(voice))
+        speech[start:end] += voice[: end - start]
+    write_wav(speech + pad(length), WORK / "demo_audio.wav")
+    mascot = mascot_movie(speech, length, WORK / "snoozy_demo.mov")
     out = OUT / "night_guard_family_room_demo.mp4"
-    run("ffmpeg", "-v", "error", "-y", "-i", str(raw), "-i", str(WORK / "demo_audio.wav"),
-        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30",
+    run("ffmpeg", "-v", "error", "-y", "-ss", f"{cut:.2f}", "-i", str(raw), "-i", str(WORK / "demo_audio.wav"),
+        "-i", str(mascot), "-filter_complex",
+        f"[0:v]scale=1920:1080:flags=lanczos,fps={FPS}[bg];[bg][2:v]overlay=24:H-h-8:shortest=1[v]",
+        "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30",
         "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", str(out))
     return out
 
@@ -116,8 +150,8 @@ def shot_slide(tag: str, title: str, frame: Path) -> Image.Image:
     d.text((140, 70), tag, font=font(26, True), fill=AMBER)
     d.text((140, 110), title, font=font(54, True), fill=WHITE)
     shot = Image.open(frame).convert("RGB")
-    shot.thumbnail((1640, 820))
-    x, y = (W - shot.width) // 2, 220
+    shot.thumbnail((1420, 800))
+    x, y = 120, 220  # leaves the bottom-right corner to Snoozy
     d.rounded_rectangle([x - 8, y - 8, x + shot.width + 8, y + shot.height + 8], 18, fill=(30, 27, 75))
     img.paste(shot, (x, y))
     return img
@@ -154,7 +188,7 @@ def frame_at(video: Path, seconds: float, name: str) -> Path:
 
 
 def finish_film(demo_raw: Path, scenes: list[dict]) -> Path:
-    at = {s["key"]: s["at"] for s in scenes}
+    at = {s["key"]: s["at"] for s in scenes}  # times in the raw recording
     voice = json.loads((WORK / "voice.json").read_text())
     slides = {
         "f0_intro": text_slide("FLIP THE SWITCH · TRACK 02", "Night Guard Family Room",
@@ -184,7 +218,7 @@ def finish_film(demo_raw: Path, scenes: list[dict]) -> Path:
         seconds = voice[key] + 0.9
         clip = WORK / f"{key}.mp4"
         run("ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", str(png), "-t", f"{seconds:.2f}",
-            "-vf", "fade=in:0:12,fade=out:st=" + f"{seconds - 0.4:.2f}" + ":d=0.4", "-r", "30",
+            "-vf", "fade=in:0:12,fade=out:st=" + f"{seconds - 0.4:.2f}" + ":d=0.4", "-r", str(FPS),
             "-c:v", "libx264", "-pix_fmt", "yuv420p", str(clip))
         parts.append(clip)
         v = pcm(WORK / "voice" / f"{key}.mp3")
@@ -193,11 +227,14 @@ def finish_film(demo_raw: Path, scenes: list[dict]) -> Path:
         audio.append(seg)
     speech = np.concatenate(audio)
     write_wav(speech + pad(len(speech) / SR), WORK / "film_audio.wav")
+    mascot = mascot_movie(speech, len(speech) / SR, WORK / "snoozy_film.mov")
     listing = WORK / "film_parts.txt"
     listing.write_text("".join(f"file '{p.as_posix()}'\n" for p in parts))
     out = OUT / "night_guard_family_room_film.mp4"
     run("ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-i",
-        str(WORK / "film_audio.wav"), "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+        str(WORK / "film_audio.wav"), "-i", str(mascot), "-filter_complex",
+        "[0:v][2:v]overlay=W-w-60:H-h-20:shortest=1[v]", "-map", "[v]", "-map", "1:a",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
         "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", str(out))
     return out
 

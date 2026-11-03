@@ -10,6 +10,7 @@ start times go to video/work/scenes.json so the narration can be laid on top aft
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 import subprocess
@@ -25,31 +26,34 @@ from family_room.config import load_state  # noqa: E402
 from family_room.setup import Mattermost  # noqa: E402
 
 WORK = ROOT / "video" / "work"
-W, H = 1920, 1080
+W, H = 1440, 810  # recorded at this size and scaled to 1080p, so the chat text is easy to read
 
 CSS = """
 #ng-cap{pointer-events:none;position:fixed;left:0;right:0;top:0;z-index:2147483647;background:rgba(15,23,42,.95);color:#fff;
  font:600 28px/1.35 Helvetica,Arial,sans-serif;padding:18px 40px 22px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 #ng-cap small{display:block;font-weight:400;font-size:21px;color:#cbd5e1;margin-top:6px}
-#ng-badge{pointer-events:none;position:fixed;bottom:18px;left:18px;z-index:2147483647;background:#4338ca;color:#fff;
+#ng-badge{pointer-events:none;position:fixed;bottom:250px;left:18px;z-index:2147483647;background:#4338ca;color:#fff;
  font:700 20px Helvetica,Arial,sans-serif;padding:8px 16px;border-radius:999px}
 #ng-card{position:fixed;inset:0;z-index:2147483647;background:linear-gradient(135deg,#0b1026,#312e81);color:#fff;
  display:none;flex-direction:column;justify-content:center;padding:0 140px;font-family:Helvetica,Arial,sans-serif}
 #ng-card h1{font-size:72px;margin:0 0 22px} #ng-card p{font-size:32px;color:#c7d2fe;margin:8px 0;line-height:1.4}
 #ng-card .tag{font-size:22px;font-weight:700;background:#fbbf24;color:#1f2937;padding:6px 14px;border-radius:999px;
  width:max-content;margin-bottom:26px}
+#ng-pic{position:fixed;inset:0;z-index:2147483646;background:linear-gradient(135deg,#0b1026,#312e81);display:none;
+ align-items:center;justify-content:center;padding-top:60px}
+#ng-pic img{max-width:86%;max-height:78%;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.5);border:3px solid #fbbf24}
 .announcement-bar{display:none!important}
 """
 OVERLAY = """(css) => { if (document.getElementById('ng-cap')) return;
  const s=document.createElement('style'); s.textContent=css; document.head.appendChild(s);
- for (const id of ['ng-cap','ng-badge','ng-card']) { const d=document.createElement('div'); d.id=id;
+ for (const id of ['ng-cap','ng-badge','ng-card','ng-pic']) { const d=document.createElement('div'); d.id=id;
    d.style.display='none'; document.body.appendChild(d); } }"""
 
 
 class Director:
-    def __init__(self, page: Page, voice: dict[str, float]):
+    def __init__(self, page: Page, voice: dict[str, float], t0: float):
         self.page, self.voice = page, voice
-        self.t0 = time.time()
+        self.t0 = t0  # when the recording started, so scene times match the video
         self.scenes: list[dict] = []
         self.caption = ("", "")
         self.badge = ""
@@ -74,6 +78,12 @@ class Director:
         body = f'<span class="tag">{tag}</span><h1>{title}</h1>' + "".join(f"<p>{x}</p>" for x in lines)
         self.page.evaluate("([b, s]) => {const c=document.getElementById('ng-card'); c.innerHTML=b;"
                            "c.style.display=s?'flex':'none';}", [body, show])
+
+    def picture(self, png: bytes | None) -> None:
+        """Show a real screenshot (another person's view) full screen, or hide it."""
+        src = "data:image/png;base64," + base64.b64encode(png).decode() if png else ""
+        self.page.evaluate("([s]) => {const c=document.getElementById('ng-pic');"
+                           "c.innerHTML=s?`<img src='${s}'>`:''; c.style.display=s?'flex':'none';}", [src])
 
     def scene(self, key: str, action=None, extra: float = 0.8) -> None:
         """Start scene `key`, run its action, and hold until its narration has finished."""
@@ -119,9 +129,10 @@ def open_channel(page: Page, url: str, ready: str = COMPOSER) -> None:
     page.wait_for_timeout(1200)
 
 
-def open_thread(page: Page) -> None:
-    """Open the newest thread in the right-hand panel and widen it (Mattermost collapses replies)."""
-    button = page.get_by_role("button", name=re.compile(r"\d+ repl")).last
+def open_thread(page: Page, root_text: str) -> None:
+    """Open the thread of the post containing root_text in the right-hand panel, and widen it."""
+    post = page.locator("[id^='post_']", has_text=root_text).last
+    button = post.get_by_role("button", name=re.compile(r"\d+ repl")).first
     button.wait_for(timeout=120000)
     button.click()
     page.locator("#rhsContainer, .sidebar--right").first.wait_for(timeout=15000)
@@ -145,11 +156,6 @@ def main() -> None:
     voice = json.loads((WORK / "voice.json").read_text())
     mm_url, team = state["mattermost_url"], state["team"]
     pw = state["passwords"]
-    for who in ("mom", "lia"):  # replies shown inline in the channel, so the whole case is on one screen
-        mm = Mattermost(mm_url, who, pw[who])
-        me = mm.get("/users/me").json()["id"]
-        mm.http.put(f"{mm_url}/api/v4/users/{me}/preferences", json=[
-            {"user_id": me, "category": "display_settings", "name": "collapsed_reply_threads", "value": "off"}])
     dad = Mattermost(mm_url, "dad", pw["dad"])
     family = state["rooms"]["family"]
     (WORK / "raw").mkdir(parents=True, exist_ok=True)
@@ -159,6 +165,7 @@ def main() -> None:
         ctx = browser.new_context(viewport={"width": W, "height": H}, record_video_dir=str(WORK / "raw"),
                                   record_video_size={"width": W, "height": H})
         page = ctx.new_page()
+        t0 = time.time()  # the recording starts with the page
         login(page, mm_url, "mom", pw["mom"])
         try:
             open_channel(page, f"{mm_url}/{team}/channels/{family['name']}")
@@ -166,7 +173,7 @@ def main() -> None:
             page.screenshot(path=str(WORK / "fail.png"))
             print("landed on", page.url, page.title())
             raise
-        d = Director(page, voice)
+        d = Director(page, voice, t0)
         d.overlay()
         d.set_badge("Signed in as mom")
 
@@ -185,7 +192,7 @@ def main() -> None:
         def plan():
             d.set_caption("2 · family-helper explains and proposes steps",
                           "It waits: nothing is written or sent before a parent approves")
-            open_thread(page)
+            open_thread(page, "contact Alex_17")
             wait_text(page, "Here's what I suggest")
             scroll_thread(page)
         d.scene("d2_plan", plan)
@@ -218,24 +225,26 @@ def main() -> None:
         d.scene("d5_edit", edit, extra=2)
 
         def child():
-            d.set_caption("6 · Lia's own room", "The child is always told when something is shared")
-            login(page, mm_url, "lia", pw["lia"])  # same page, so the recording stays one take
-            open_channel(page, f"{mm_url}/{team}/channels/{state['rooms']['child']['name']}")
-            page.get_by_text("NOT in trouble", exact=False).last.wait_for(timeout=60000)
-            d.overlay()
-            d.set_badge("Signed in as Lia")
-            page.mouse.wheel(0, 4000)
+            d.set_caption("6 · Meanwhile, in Lia's own room", "The child is always told when something is shared")
+            kid = browser.new_context(viewport={"width": W, "height": H}).new_page()  # Lia's own session
+            login(kid, mm_url, "lia", pw["lia"])
+            open_channel(kid, f"{mm_url}/{team}/channels/{state['rooms']['child']['name']}")
+            kid.get_by_text("NOT in trouble", exact=False).last.wait_for(timeout=60000)
+            kid.mouse.move(W * 0.5, H * 0.5)
+            kid.mouse.wheel(0, 4000)
+            kid.wait_for_timeout(600)
+            d.set_badge("Lia's view")
+            d.picture(kid.screenshot())
+            kid.context.close()
         d.scene("d6_child", child, extra=1.5)
 
         def threat():
-            login(page, mm_url, "mom", pw["mom"])
-            open_channel(page, f"{mm_url}/{team}/channels/{family['name']}")
-            d.overlay()
+            d.picture(None)
             d.set_badge("Signed in as mom")
             d.set_caption("7 · Threats or money demands", "SaferNet / NCMEC and the police. Don't pay. Fixed text.")
             subprocess.run([sys.executable, "-m", "family_room.device", "gift-card-threat"], cwd=ROOT, check=True)
             wait_text(page, "contact pix_trader")
-            open_thread(page)
+            open_thread(page, "contact pix_trader")
             wait_text(page, "SaferNet / NCMEC")
             scroll_thread(page)
         d.scene("d7_threat", threat, extra=1.5)
