@@ -158,7 +158,7 @@ def mix():
     kern = SR // 4; c = np.cumsum(np.concatenate([np.zeros(kern), (np.abs(voice) > 0.02).astype(float)]))
     duck = 1 - 0.65 * np.clip((c[kern:] - c[:-kern]) / kern * 3, 0, 1)
     fade = np.ones(N); fade[int((DUR - 2) * SR):] = np.linspace(1, 0, N - int((DUR - 2) * SR))
-    out = voice + music * 0.22 * duck * fade
+    out = voice + music * 0.15 * duck * fade
     out = np.tanh(out * 0.9) / np.tanh(0.9); out = out / np.abs(out).max() * 0.95
     sf.write(WORK / "_tour_mix.wav", np.stack([out, out], 1), SR)
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
                            "-i", str(WORK / "_tour_mix.wav"),
                            "-filter_complex", f"[0:v]fps={FPS},tpad=stop_mode=clone:stop_duration=6,pad={W}:{H}:{FX}:{FY}:color=#f7f2e6[bg];[bg][1:v]overlay=0:0:shortest=1[v]",
                            "-map", "[v]", "-map", "2:a", "-t", str(DUR), "-c:v", "libx264", "-preset", "medium", "-crf", "19",
-                           "-pix_fmt", "yuv420p", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "192k", str(dst)],
+                           "-pix_fmt", "yuv420p", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-ar", "48000", "-b:a", "192k", str(dst)],
                           stdin=subprocess.PIPE)
     for i in range(int(DUR * FPS)):
         ff.stdin.write(frame(i / FPS).tobytes())

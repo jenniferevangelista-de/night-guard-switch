@@ -4,13 +4,16 @@ in the night-guard repo). Jennifer opens it.
 
   python video/tour_script.py      -> video/work/voice/<scene>.mp3 and video/work/voice.json (durations)
 """
+import asyncio
 import json
 import subprocess
 from pathlib import Path
 
+import edge_tts
+
 WORK = Path(__file__).resolve().parent / "work"
 SNOOZY = ("en-US-BrianMultilingualNeural", "+10%")
-JENNI = ("en-US-AvaMultilingualNeural", "-4%")
+JENNI = ("en-US-AvaMultilingualNeural", "+15%")   # the film plays 20% faster: same pace as her voice there
 
 # scene key (as in record_demo.py), title beside the recording, voice, line
 LINES = [
@@ -45,7 +48,7 @@ if __name__ == "__main__":
     lengths, meta = {}, []
     for key, title, (voice, rate), line in LINES:
         mp3 = WORK / "voice" / f"{key}.mp3"
-        subprocess.run(["edge-tts", "--voice", voice, f"--rate={rate}", "--text", line, "--write-media", str(mp3)], check=True)
+        asyncio.run(edge_tts.Communicate(line, voice, rate=rate).save(str(mp3)))   # same call as the film
         lengths[key] = duration(mp3)
         meta.append({"id": key, "title": title, "who": "jenni" if voice == JENNI[0] else "snoozy", "line": line,
                      "voice": f"voice/{key}.mp3", "dur": round(lengths[key], 2)})
