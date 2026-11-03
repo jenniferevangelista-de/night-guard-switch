@@ -7,18 +7,21 @@ in the night-guard repo). Jennifer opens it.
 import asyncio
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import edge_tts
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from film_script import SCENES as FILM_SCENES  # noqa: E402
+
 WORK = Path(__file__).resolve().parent / "work"
 SNOOZY = ("en-US-BrianMultilingualNeural", "+10%")
-JENNI = ("en-US-AvaMultilingualNeural", "+15%")   # the film plays 20% faster: same pace as her voice there
+JENNI = ("en-US-AvaMultilingualNeural", "-4%")    # exactly as in the film, then 20% faster like the film
 
 # scene key (as in record_demo.py), title beside the recording, voice, line
 LINES = [
-    ("d0_title", "Hello", JENNI, "Hi, I'm Jennifer Evangelista. This is Night Guard Family Room, running for real on "
-                                 "Switch and Mattermost."),
+    ("d0_title", "Hello", JENNI, FILM_SCENES[0][2]),   # Jennifer's opening, the same line as the film
     ("d1_alert", "The alert", SNOOZY, "Hi, Snoozy again. Night Guard just found a risk in a fictional Roblox chat. Switch "
                                       "posts the alert in the family room: only the flagged phrase, never the chat."),
     ("d2_plan", "The plan", SNOOZY, "Family helper reads the alert document, explains it in plain words, and proposes four "
@@ -49,6 +52,11 @@ if __name__ == "__main__":
     for key, title, (voice, rate), line in LINES:
         mp3 = WORK / "voice" / f"{key}.mp3"
         asyncio.run(edge_tts.Communicate(line, voice, rate=rate).save(str(mp3)))   # same call as the film
+        if voice == JENNI[0]:   # the film plays 20% faster; her opening here sounds exactly like it does there
+            raw = mp3.with_name(mp3.stem + "_raw.mp3")
+            mp3.rename(raw)
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-filter:a", "atempo=1.2", str(mp3)], check=True)
+            raw.unlink()
         lengths[key] = duration(mp3)
         meta.append({"id": key, "title": title, "who": "jenni" if voice == JENNI[0] else "snoozy", "line": line,
                      "voice": f"voice/{key}.mp3", "dur": round(lengths[key], 2)})
