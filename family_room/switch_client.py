@@ -49,7 +49,11 @@ def register_agent(base_url: str, registration_token: str, name: str, descriptio
 
 
 def parse_sse(lines: Iterator[str]) -> Iterator[dict]:
-    """Turn SSE lines into event dicts. Comments (keepalives) are skipped."""
+    """Turn SSE lines into event dicts. Comments (keepalives) are skipped.
+
+    An event ends at a blank line, but some HTTP clients drop blank lines, so a data payload
+    is also emitted as soon as it is complete JSON (Switch sends one JSON object per event).
+    """
     data: list[str] = []
     for line in lines:
         line = line.rstrip("\r\n")
@@ -57,12 +61,15 @@ def parse_sse(lines: Iterator[str]) -> Iterator[dict]:
             continue
         if line.startswith("data:"):
             data.append(line[5:].strip())
+            try:
+                event = json.loads("\n".join(data))
+            except ValueError:
+                continue  # a payload split over several data lines: wait for the rest
+            data = []
+            yield event
             continue
         if line == "" and data:
-            try:
-                yield json.loads("\n".join(data))
-            except ValueError:
-                log.warning("skipping a frame that is not JSON")
+            log.warning("skipping a frame that is not JSON")
             data = []
 
 

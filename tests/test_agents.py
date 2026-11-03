@@ -104,6 +104,10 @@ def test_parse_sse():
     lines = [": keepalive", "id: 7", "event: message", 'data: {"type":"message","sequence":7}', "",
              'data: {"type":"connection_state"}', ""]
     assert [e["type"] for e in parse_sse(iter(lines))] == ["message", "connection_state"]
+    no_blank_lines = [x for x in lines if x]
+    assert [e["type"] for e in parse_sse(iter(no_blank_lines))] == ["message", "connection_state"]
+    split = ['data: {"type":', 'data: "message"}', ""]
+    assert [e["type"] for e in parse_sse(iter(split))] == ["message"]
 
 
 def test_hotline_case_for_threats(wired):
