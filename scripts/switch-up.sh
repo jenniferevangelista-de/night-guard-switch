@@ -13,8 +13,13 @@ if [ ! -d "$DIR" ]; then
 fi
 cd "$DIR"
 if [ ! -f .env ]; then
+  # Same as Switch's own `just init-env`: fresh random secrets for this machine only.
   cp .env.example .env
-  deploy/local/generate-env-secrets.sh .env local
+  for key in DB_PASSWORD DB_OWNER_PASSWORD AGENT_REGISTRATION_TOKEN GATEWAY_ADMIN_PASSWORD \
+             MATTERMOST_ADMIN_PASSWORD MATTERMOST_USER_PASSWORD; do
+    sed -i.bak "s|^${key}=.*|${key}=$(openssl rand -hex 24)|" .env
+  done
+  sed -i.bak "s|^SECRET_KEYS=.*|SECRET_KEYS=local:$(openssl rand -hex 32)|" .env
   sed -i.bak "s|^SWITCH_VERSION=.*|SWITCH_VERSION=$SWITCH_VERSION|" .env
   rm -f .env.bak
 fi

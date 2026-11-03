@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: night-guard-switch
+Version: 0.1.0
+Summary: Night Guard alerts worked out by the family and an AI agent in their group chat, through Switch
+License: MIT
+Requires-Python: >=3.11
+License-File: LICENSE
+Requires-Dist: httpx>=0.27
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: ruff>=0.6; extra == "dev"
+Dynamic: license-file
