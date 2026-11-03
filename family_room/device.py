@@ -30,7 +30,7 @@ def alert_text(event: dict, child: str) -> str:
     return (
         f"🌙 Night Guard alert · {SEV.get(event['severity'], event['severity'])} · {event['app']} · contact {event['contact']}\n"
         f"{sig}\n"
-        f"Shared by your family rules. {child} was told on their computer. The full chat stays there."
+        f"Shared by your family rules. {child} was already told by Night Guard. The full chat stays on {child}'s computer."
     )
 
 
@@ -70,7 +70,9 @@ def _deliver(agent, event: dict, child: str, family: str, kid_room: str) -> None
             json.dumps(record, ensure_ascii=False, indent=2),
             instructions="Night Guard alert as JSON: risk type, app, contact, flagged phrase. Never the full chat.",
         )
-        agent.mention(family, alert_text(event, child) + f"\nng-alert {event['id']} doc {doc}", [HELPER_AGENT])
+        agent.mention(family, alert_text(event, child)
+                      + f"\nCase {event['id']} · details in room document alert-{event['id']}", [HELPER_AGENT])
+        print(f"alert document {doc}")
     agent.post(kid_room, child_text(event, child))
 
 

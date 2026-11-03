@@ -31,6 +31,9 @@ class FakeAgent:
     def update_document(self, room_id, document_id, content):
         self.docs[document_id]["content"] = content
 
+    def find_document(self, room_id, name):
+        return next((i for i, d in self.docs.items() if d["name"] == name and d["room"] == room_id), None)
+
     def load_documents(self, room_id, ids):
         return [{"id": i, "description": "", "content": self.docs[i]["content"]} for i in ids]
 

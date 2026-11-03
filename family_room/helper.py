@@ -20,7 +20,7 @@ from .config import DEVICE_AGENT, HELPER_AGENT, ROOT, load_state
 from .switch_client import Agent
 
 log = logging.getLogger("family-helper")
-ALERT_RE = re.compile(r"ng-alert (\w+) doc ([\w-]+)")
+ALERT_RE = re.compile(r"room document alert-(\w+)")
 CASES_FILE = ROOT / ".cases.json"
 
 
@@ -60,7 +60,7 @@ class FamilyHelper:
         body = p.get("body") or ""
         alert = ALERT_RE.search(body)
         if alert and sender == DEVICE_AGENT:
-            self.on_alert(p, alert.group(1), alert.group(2))
+            self.on_alert(p, alert.group(1))
             return
         case = next((c for c in self.cases.values() if c.thread_id and c.thread_id == p.get("thread_id")), None)
         cmd = workflow.parse(body)
@@ -72,8 +72,12 @@ class FamilyHelper:
             return
         self.on_command(case, cmd, parent)
 
-    def on_alert(self, payload: dict, alert_id: str, doc_id: str) -> None:
+    def on_alert(self, payload: dict, alert_id: str) -> None:
         if alert_id in self.cases:
+            return
+        doc_id = self.agent.find_document(self.family, f"alert-{alert_id}")
+        if doc_id is None:
+            log.warning("alert %s has no document in the room", alert_id)
             return
         doc = self.agent.load_documents(self.family, [doc_id])[0]
         record = json.loads(doc["content"])

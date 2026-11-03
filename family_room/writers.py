@@ -94,7 +94,7 @@ def talk_script(event: dict, child: str, note: str = "") -> str:
         "End: \"Thank you for being honest. You can always tell us, even if you think you'll get in trouble.\""
     )
     if note:
-        template += f"\n\nParent's note: {note}"
+        template = f"Before you start, your note: {note}\n\n" + template
     text = _model(STYLE, "Write a short talk script (opening line, 2 questions, a kind explanation, what we agree, "
                   "closing line) for the parent to use with the child tonight. Keep the child's dignity."
                   + (f" Apply this request from the parent: {note}" if note else "") + "\n" + facts(event, child))

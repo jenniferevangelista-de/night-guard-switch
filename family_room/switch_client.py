@@ -137,6 +137,13 @@ class Agent:
             self.in_room(room_id)
             self.op("update_room_document", document_id=document_id, content=content)
 
+    def find_document(self, room_id: str, name: str) -> str | None:
+        """The id of the room document called `name`, from the room's context."""
+        with self._lock:
+            context = self.op("connect_to_room", room_id=room_id, include_general_instructions=False)
+            self._room = room_id
+        return next((d["id"] for d in context.get("documents", []) if d.get("name") == name), None)
+
     def load_documents(self, room_id: str, ids: list[str]) -> list[dict]:
         with self._lock:
             self.in_room(room_id)
