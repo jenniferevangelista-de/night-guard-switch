@@ -22,7 +22,7 @@ family-safety  (mom, dad, night-guard, family-helper)
 
 night-guard     🌙 Night Guard alert · 🔴 HIGH · Roblox · contact Alex_17
                 • Asked to keep a secret: "don't tell your parents ok?"
-                Shared by your family rules. Lia was told on their computer. The full chat stays there.
+                Shared by your family rules. Lia was already told by Night Guard. The full chat stays on Lia's computer.
   ↳ family-helper  What this means: asking a child to hide a conversation from family is a well-documented
                    warning sign of grooming.
                    Here's what I suggest. I'll prepare each step only after one of you approves it:
@@ -36,14 +36,14 @@ night-guard     🌙 Night Guard alert · 🔴 HIGH · Roblox · contact Alex_17
   ↳ family-helper  📄 Step 2, talk script …
 ```
 
-A full transcript of a real run is in [docs/transcript.md](docs/transcript.md) (produced by the end-to-end check, see below).
+A full transcript of a real run, with Gemma writing the texts, is in [docs/transcript.md](docs/transcript.md) (produced by the end-to-end check, see below).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
   subgraph PC["Child's computer"]
-    chat["Game / app chat<br/>(fictional in this repo)"] --> det["Night Guard detector<br/>Gemma via Ollama · GitHub Models · replay"]
+    chat["Game / app chat<br/>(fictional in this repo)"] --> det["Night Guard detector<br/>Gemma via Ollama · replay"]
     det --> rules["Family rules<br/>tell the family, or the child decides"]
     rules --> ng["night-guard agent"]
   end
@@ -104,8 +104,10 @@ Fictional chats: `snap-secret`, `photo-pressure`, `meet-alone`, `gift-card-threa
 
 | Setting | Default | Options |
 |---|---|---|
-| `NG_DETECTOR` | `replay`: Night Guard's hand labels for these chats, so the demo needs no model | `github` (GitHub Models, needs `GITHUB_TOKEN`), `ollama` (Gemma on the child's computer, like the Night Guard app) |
-| `NG_WRITER` | `template`: every text is a fixed template | `github`: GitHub Models makes the explanation and the talk script sound natural and applies a parent's edit |
+| `NG_DETECTOR` | `replay`: Night Guard's hand labels for these chats, so the demo needs no model | `ollama`: Gemma on the child's computer, exactly like the Night Guard app (`NG_MODEL`, default `gemma4:e4b`) |
+| `NG_WRITER` | `template`: every text is a fixed template | `ollama`: Gemma on the family's own machine writes the explanation and the talk script and applies a parent's edit (`NG_WRITER_MODEL`, default `gemma3:4b`) |
+
+With `ollama`, start Ollama and pull the model first (`ollama pull gemma3:4b`). If the model is missing or slow to answer, family-helper falls back to the templates, so a parent is never left waiting.
 
 Safety-critical text never comes from a model: where to report, "don't pay", "you're not in trouble", what not to screenshot. That rule comes from Night Guard.
 
@@ -131,8 +133,9 @@ The transcript of each run is uploaded as an artifact.
 | Pre-existing (Night Guard, before 04/11/2026) | Built during the hackathon (04/11 to 07/11/2026) |
 |---|---|
 | [`nightguard/signals.py`](nightguard/signals.py): the 13 risk signals, the kid and parent wording and their sources (verbatim) | Everything in [`family_room/`](family_room): the Switch agent protocol client, both agents, the approval workflow, the step writers, setup and the end-to-end check |
-| [`nightguard/detector.py`](nightguard/detector.py): the classifier prompt, schema, evidence checks and severity (verbatim; the model call moved to `family_room/detect.py`) | `scripts/`, the GitHub Actions workflows, the tests, this README and the videos |
+| [`nightguard/detector.py`](nightguard/detector.py): the classifier prompt, schema, evidence checks and severity (verbatim; the model call moved to `family_room/detect.py`) | `scripts/`, the GitHub Actions workflows, the tests, this README and the videos (`video/`: recorded with Playwright on a real Switch, narrated with edge-tts) |
 | [`nightguard/family.py`](nightguard/family.py): the family rules (`apply_rules`, no longer writes a local file) | The Switch setup: rooms, documents, linked rooms, agent registration |
+| [`video/snoozy.py`](video/snoozy.py): Snoozy, Night Guard's mascot, drawn for the Night Guard films (now lip-synced over the new videos) | |
 | The fictional chats in [`scenarios/chats.json`](scenarios/chats.json) come from Night Guard's evaluation set (ids noted in the file) | `whatsapp-number` app and contact names, and `just-gaming` |
 
 Each pre-existing file says so in its header. Night Guard won Best Use of Backboard in the DEV x Hacktoberfest 2026 challenge.
@@ -143,7 +146,7 @@ Each pre-existing file says so in its header. Night Guard won Best Use of Backbo
 - The family room only ever receives what Night Guard's family rules share: risk type, app, contact name and the flagged phrase. The end-to-end check fails if any other part of the chat shows up there.
 - The child is always told when something is shared, in their own room, in kid wording.
 - Switch is self-hosted: the rooms, documents and chat history stay on the family's own server.
-- With `NG_DETECTOR=ollama` the chat is analyzed on the child's computer and never leaves it. The `github` options send text to GitHub Models; the demo uses `replay` and `template`.
+- Every model runs locally through Ollama: with `NG_DETECTOR=ollama` the chat is analyzed on the child's computer, and with `NG_WRITER=ollama` the texts are written on the family's own machine. No text goes to a cloud model.
 
 ## Sources
 

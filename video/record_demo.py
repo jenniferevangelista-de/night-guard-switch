@@ -85,15 +85,21 @@ class Director:
         self.page.evaluate("([s]) => {const c=document.getElementById('ng-pic');"
                            "c.innerHTML=s?`<img src='${s}'>`:''; c.style.display=s?'flex':'none';}", [src])
 
-    def scene(self, key: str, action=None, extra: float = 0.8) -> None:
-        """Start scene `key`, run its action, and hold until its narration has finished."""
+    def scene(self, key: str, action=None, extra: float = 0.8, narrate_after: bool = False) -> None:
+        """Start scene `key`, run its action, and hold until its narration has finished.
+
+        narrate_after: the narration starts once the action is done (e.g. once Gemma's answer is on
+        screen); the wait before it is cut out of the final video.
+        """
         start = time.time()
-        self.scenes.append({"key": key, "at": round(start - self.t0, 2)})
         if action:
             action()
-        rest = self.voice.get(key, 3) + extra - (time.time() - start)
+        at = time.time() if narrate_after else start
+        rest = self.voice.get(key, 3) + extra - (time.time() - at)
         if rest > 0:
             self.page.wait_for_timeout(rest * 1000)
+        self.scenes.append({"key": key, "start": round(start - self.t0, 2), "at": round(at - self.t0, 2),
+                            "end": round(time.time() - self.t0, 2)})
 
 
 def login(page: Page, mm_url: str, username: str, password: str) -> None:
@@ -148,7 +154,8 @@ def scroll_thread(page: Page) -> None:
 
 
 def wait_text(page: Page, text: str, timeout: float = 240) -> None:
-    page.get_by_text(text, exact=False).last.wait_for(timeout=timeout * 1000)
+    """Wait for text in Mattermost itself (#root), never in the captions drawn over it."""
+    page.locator("#root").get_by_text(text, exact=False).last.wait_for(timeout=timeout * 1000)
 
 
 def main() -> None:
@@ -195,7 +202,7 @@ def main() -> None:
             open_thread(page, "contact Alex_17")
             wait_text(page, "Here's what I suggest")
             scroll_thread(page)
-        d.scene("d2_plan", plan)
+        d.scene("d2_plan", plan, narrate_after=True)
 
         def approve():
             d.set_caption("3 · Mom approves in the thread", "@family-helper approve 1 3 4")
@@ -222,7 +229,7 @@ def main() -> None:
                                 "message": "@family-helper edit 2: she's 10, keep it short and start by saying we love her"})
             wait_text(page, "Step 2, talk script")
             scroll_thread(page)
-        d.scene("d5_edit", edit, extra=2)
+        d.scene("d5_edit", edit, extra=2, narrate_after=True)
 
         def child():
             d.set_caption("6 · Meanwhile, in Lia's own room", "The child is always told when something is shared")
@@ -247,7 +254,7 @@ def main() -> None:
             open_thread(page, "contact pix_trader")
             wait_text(page, "SaferNet / NCMEC")
             scroll_thread(page)
-        d.scene("d7_threat", threat, extra=1.5)
+        d.scene("d7_threat", threat, extra=1.5, narrate_after=True)
 
         d.scene("d8_end", lambda: d.card("github.com/jenniferevangelista-de/night-guard-switch",
                                          "Switch is the backbone",

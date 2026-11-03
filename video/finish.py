@@ -87,20 +87,34 @@ def mascot_movie(speech: np.ndarray, seconds: float, path: Path) -> Path:
 def finish_demo() -> Path:
     raw = Path(json.loads((WORK / "raw.json").read_text())["video"])
     scenes = json.loads((WORK / "scenes.json").read_text())
-    cut = max(0.0, scenes[0]["at"] - 0.2)  # drop the sign-in pre-roll before the title card
-    length = duration(raw) - cut
-    speech = np.zeros(int(length * SR), np.float32)
+    begin = max(0.0, scenes[0]["start"] - 0.2)  # drop the sign-in pre-roll before the title card
+    end_t = min(duration(raw), scenes[-1]["end"] + 0.3)
+    # Waits for the agent (Gemma writing on a CPU) are cut, keeping a short beat on each side.
+    gaps = [(s["start"] + 1.5, s["at"] - 0.8) for s in scenes if s["at"] - s["start"] > 4]
+    keep, t = [], begin
+    for g0, g1 in gaps:
+        keep.append((t, g0))
+        t = g1
+    keep.append((t, end_t))
+
+    def new_time(x: float) -> float:
+        return sum(max(0.0, min(x, b) - a) for a, b in keep)
+
+    length = sum(b - a for a, b in keep)
+    speech = np.zeros(int(length * SR) + SR, np.float32)
     for s in scenes:
         voice = pcm(WORK / "voice" / f"{s['key']}.mp3")
-        start = int((s["at"] - cut + 0.3) * SR)
+        start = int((new_time(s["at"]) + 0.3) * SR)
         end = min(len(speech), start + len(voice))
         speech[start:end] += voice[: end - start]
     write_wav(speech + pad(length), WORK / "demo_audio.wav")
     mascot = mascot_movie(speech, length, WORK / "snoozy_demo.mov")
     out = OUT / "night_guard_family_room_demo.mp4"
-    run("ffmpeg", "-v", "error", "-y", "-ss", f"{cut:.2f}", "-i", str(raw), "-i", str(WORK / "demo_audio.wav"),
+    select = "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in keep)
+    run("ffmpeg", "-v", "error", "-y", "-i", str(raw), "-i", str(WORK / "demo_audio.wav"),
         "-i", str(mascot), "-filter_complex",
-        f"[0:v]scale=1920:1080:flags=lanczos,fps={FPS}[bg];[bg][2:v]overlay=24:H-h-8:shortest=1[v]",
+        f"[0:v]fps={FPS},select='{select}',setpts=N/{FPS}/TB,scale=1920:1080:flags=lanczos[bg];"
+        "[bg][2:v]overlay=24:H-h-8:shortest=1[v]",
         "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30",
         "-c:a", "aac", "-b:a", "160k", "-af", "loudnorm=I=-14:TP=-1.5", "-shortest", str(out))
     return out
