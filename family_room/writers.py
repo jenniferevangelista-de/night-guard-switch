@@ -4,6 +4,7 @@ Night Guard's rule carries over: anything safety-critical is a fixed template (w
 "don't pay", "you're not in trouble"). A model is only used to make the explanation and the
 talk script sound natural for this family, and to apply a parent's edit. When no model is
 configured (NG_WRITER=template, the default) every text comes from the templates below.
+NG_WRITER=ollama uses Gemma through Ollama (NG_WRITER_MODEL, default gemma3:4b).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ import httpx
 
 log = logging.getLogger("writers")
 
-GITHUB_MODELS_URL = "https://models.github.ai/inference/chat/completions"
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 
 HOTLINE_SIGNALS = {"photo_request", "sextortion"}  # Night Guard: image requests, threats or money demands
 APP_REPORT_HELP = {
@@ -39,25 +40,25 @@ def writer() -> str:
 
 
 def _model(system: str, user: str) -> str | None:
-    """Ask GitHub Models for a short text. Any failure falls back to the template."""
-    if writer() != "github":
-        return None
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if not token:
+    """Ask Gemma (through Ollama, on the family's own machine) for a short text.
+
+    Any failure falls back to the template, so a missing model never blocks the family.
+    """
+    if writer() != "ollama":
         return None
     try:
         r = httpx.post(
-            GITHUB_MODELS_URL,
-            headers={"Authorization": f"Bearer {token}"},
-            json={"model": os.environ.get("NG_GITHUB_MODEL", "openai/gpt-4.1-mini"), "temperature": 0.3,
+            f"{OLLAMA_URL}/api/chat",
+            json={"model": os.environ.get("NG_WRITER_MODEL", "gemma3:4b"), "stream": False,
+                  "options": {"temperature": 0.3, "num_predict": 400},
                   "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
-            timeout=60,
+            timeout=180,
         )
         r.raise_for_status()
-        text = r.json()["choices"][0]["message"]["content"].strip()
-        return text.replace("—", ",") or None  # house style: no em dashes
-    except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
-        log.warning("GitHub Models unavailable, using the template (%s: %s)", type(exc).__name__, exc)
+        text = r.json()["message"]["content"].strip()
+        return text.replace("—", ",").replace("**", "") or None  # house style: no em dashes, chat-ready
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        log.warning("model unavailable, using the template (%s: %s)", type(exc).__name__, exc)
         return None
 
 

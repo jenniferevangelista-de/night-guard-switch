@@ -36,7 +36,7 @@ def posts(mm: Mattermost, channel: str) -> list[dict]:
     return sorted((data["posts"][i] for i in data["order"]), key=lambda p: p["create_at"])
 
 
-def wait_for(mm: Mattermost, channel: str, predicate, seconds: int = 90) -> dict | None:
+def wait_for(mm: Mattermost, channel: str, predicate, seconds: int = 240) -> dict | None:
     end = time.time() + seconds
     while time.time() < end:
         for p in posts(mm, channel):

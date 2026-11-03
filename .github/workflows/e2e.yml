@@ -5,22 +5,26 @@ on:
   workflow_dispatch:
     inputs:
       writer:
-        description: "template (fixed texts) or github (GitHub Models writes the explanation and the talk script)"
+        description: "template (fixed texts) or ollama (Gemma writes the explanation and the talk script)"
         default: template
 permissions:
   contents: read
-  models: read
 jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       NG_WRITER: ${{ inputs.writer || 'template' }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      - name: Gemma through Ollama (only when the writer is ollama)
+        if: ${{ inputs.writer == 'ollama' }}
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh >/dev/null
+          ollama pull ${NG_WRITER_MODEL:-gemma3:4b} >/dev/null
+          echo "Gemma ready"
       - name: Switch v0.31.0 + family room + scripted parents
         run: scripts/demo.sh
       - name: Logs on failure

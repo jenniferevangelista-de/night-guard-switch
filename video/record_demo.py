@@ -11,6 +11,7 @@ start times go to video/work/scenes.json so the narration can be laid on top aft
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -27,10 +28,10 @@ WORK = ROOT / "video" / "work"
 W, H = 1920, 1080
 
 CSS = """
-#ng-cap{position:fixed;left:0;right:0;bottom:0;z-index:2147483647;background:rgba(15,23,42,.95);color:#fff;
- font:600 28px/1.35 Helvetica,Arial,sans-serif;padding:18px 40px 22px;box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+#ng-cap{position:fixed;left:0;right:0;top:0;z-index:2147483647;background:rgba(15,23,42,.95);color:#fff;
+ font:600 28px/1.35 Helvetica,Arial,sans-serif;padding:18px 40px 22px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
 #ng-cap small{display:block;font-weight:400;font-size:21px;color:#cbd5e1;margin-top:6px}
-#ng-badge{position:fixed;top:14px;right:18px;z-index:2147483647;background:#4338ca;color:#fff;
+#ng-badge{position:fixed;bottom:18px;left:18px;z-index:2147483647;background:#4338ca;color:#fff;
  font:700 20px Helvetica,Arial,sans-serif;padding:8px 16px;border-radius:999px}
 #ng-card{position:fixed;inset:0;z-index:2147483647;background:linear-gradient(135deg,#0b1026,#312e81);color:#fff;
  display:none;flex-direction:column;justify-content:center;padding:0 140px;font-family:Helvetica,Arial,sans-serif}
@@ -118,7 +119,24 @@ def open_channel(page: Page, url: str, ready: str = COMPOSER) -> None:
     page.wait_for_timeout(1200)
 
 
-def wait_text(page: Page, text: str, timeout: float = 90) -> None:
+def open_thread(page: Page) -> None:
+    """Open the newest thread in the right-hand panel and widen it (Mattermost collapses replies)."""
+    button = page.get_by_role("button", name=re.compile(r"\d+ repl")).last
+    button.wait_for(timeout=120000)
+    button.click()
+    page.locator("#rhsContainer, .sidebar--right").first.wait_for(timeout=15000)
+    expand = page.locator("button[aria-label*='Expand' i]")
+    if expand.count():
+        expand.first.click()
+    page.wait_for_timeout(800)
+
+
+def scroll_thread(page: Page) -> None:
+    page.mouse.move(W * 0.6, H * 0.55)
+    page.mouse.wheel(0, 8000)
+
+
+def wait_text(page: Page, text: str, timeout: float = 240) -> None:
     page.get_by_text(text, exact=False).last.wait_for(timeout=timeout * 1000)
 
 
@@ -167,14 +185,13 @@ def main() -> None:
         def plan():
             d.set_caption("2 · family-helper explains and proposes steps",
                           "It waits: nothing is written or sent before a parent approves")
+            open_thread(page)
             wait_text(page, "Here's what I suggest")
-            page.mouse.wheel(0, 4000)
+            scroll_thread(page)
         d.scene("d2_plan", plan)
 
         def approve():
             d.set_caption("3 · Mom approves in the thread", "@family-helper approve 1 3 4")
-            page.locator(COMPOSER).first.click()
-            page.keyboard.press("Shift+ArrowUp")  # reply to the latest message: opens the alert's thread
             box = page.locator("#reply_textbox, [data-testid='reply_textbox']").first
             box.wait_for(timeout=15000)
             box.type("@family-helper approve 1 3 4 ", delay=60)
@@ -187,7 +204,7 @@ def main() -> None:
             d.set_caption("4 · The agent carries out the approved steps",
                           "Note to Lia, evidence checklist, report text: each saved as a Switch room document")
             wait_text(page, "report text for Roblox")
-            page.mouse.wheel(0, 6000)
+            scroll_thread(page)
         d.scene("d4_outputs", outputs)
 
         def edit():
@@ -197,7 +214,7 @@ def main() -> None:
             dad.post("/posts", {"channel_id": family["channel_id"], "root_id": alert_post["id"],
                                 "message": "@family-helper edit 2: she's 10, keep it short and start by saying we love her"})
             wait_text(page, "Step 2, talk script")
-            page.mouse.wheel(0, 6000)
+            scroll_thread(page)
         d.scene("d5_edit", edit, extra=2)
 
         def child():
@@ -218,8 +235,9 @@ def main() -> None:
             d.set_caption("7 · Threats or money demands", "SaferNet / NCMEC and the police. Don't pay. Fixed text.")
             subprocess.run([sys.executable, "-m", "family_room.device", "gift-card-threat"], cwd=ROOT, check=True)
             wait_text(page, "contact pix_trader")
+            open_thread(page)
             wait_text(page, "SaferNet / NCMEC")
-            page.mouse.wheel(0, 6000)
+            scroll_thread(page)
         d.scene("d7_threat", threat, extra=1.5)
 
         d.scene("d8_end", lambda: d.card("github.com/jenniferevangelista-de/night-guard-switch",

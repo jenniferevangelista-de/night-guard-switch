@@ -5,22 +5,26 @@ on:
   workflow_dispatch:
     inputs:
       writer:
-        description: "template or github"
+        description: "template or ollama (Gemma)"
         default: template
 permissions:
   contents: read
-  models: read
 jobs:
   record:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       NG_WRITER: ${{ inputs.writer || 'template' }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
+      - name: Gemma through Ollama (only when the writer is ollama)
+        if: ${{ inputs.writer == 'ollama' }}
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh >/dev/null
+          ollama pull ${NG_WRITER_MODEL:-gemma3:4b} >/dev/null
+          echo "Gemma ready"
       - name: Tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core >/dev/null
