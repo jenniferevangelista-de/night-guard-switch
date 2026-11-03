@@ -95,8 +95,14 @@ def main() -> None:
 
     agents = {name: register_agent(SWITCH, env["AGENT_REGISTRATION_TOKEN"], name, desc) for name, desc in AGENTS.items()}
     helper = Agent(SWITCH, agents[HELPER_AGENT]["id"], agents[HELPER_AGENT]["api_key"], HELPER_AGENT).connect()
-    for a in agents.values():
-        helper.op("update_agent_detail", agent_id=a["id"], addressing="anyone")
+    # An agent can't change its own settings, so each one sets the other's addressing.
+    device = Agent(SWITCH, agents[DEVICE_AGENT]["id"], agents[DEVICE_AGENT]["api_key"], DEVICE_AGENT).connect()
+    for actor, target in ((helper, DEVICE_AGENT), (device, HELPER_AGENT)):
+        try:
+            actor.op("update_agent_detail", agent_id=agents[target]["id"], addressing="anyone")
+        except SwitchError as exc:
+            print(f"addressing for {target} left at its default: {exc}")
+    device.stop()
     bridges = helper.op("list_bridges")
     bridges = bridges if isinstance(bridges, list) else bridges.get("bridges", [])
     bridge_id = next(b["id"] for b in bridges if b["type"] == "mattermost")
