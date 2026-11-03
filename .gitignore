@@ -10,3 +10,4 @@ switch/
 video/work/
 *.mp4
 *.webm
+*.egg-info/
