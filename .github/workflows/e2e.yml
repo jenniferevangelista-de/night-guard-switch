@@ -1,0 +1,35 @@
+name: end-to-end on a real Switch
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      writer:
+        description: "template (fixed texts) or github (GitHub Models writes the explanation and the talk script)"
+        default: template
+permissions:
+  contents: read
+  models: read
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NG_WRITER: ${{ inputs.writer || 'template' }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Switch v0.31.0 + family room + scripted parents
+        run: scripts/demo.sh
+      - name: Logs on failure
+        if: failure()
+        run: |
+          cat out/helper.log || true
+          cd switch && docker compose -f deploy/local/standalone-docker-compose.yml --project-directory . --profile collab --profile gateway logs --tail 150 switch setup || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: transcript
+          path: out/

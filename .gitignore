@@ -1,0 +1,12 @@
+.state.json
+.cases.json
+out/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+switch/
+video/work/
+*.mp4
+*.webm

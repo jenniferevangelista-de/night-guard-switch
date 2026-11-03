@@ -1,0 +1,95 @@
+{
+  "_about": "Fictional chats from Night Guard's evaluation set (eval/conversations.jsonl, ids r01, r09, r07, r35), with an app, a contact name and a child name added for the demo. 'labels' are the hand labels of that set, with the exact quote and message index; the replay backend returns them as the model answer so the demo runs without any model.",
+  "chats": [
+    {
+      "id": "snap-secret",
+      "source_id": "r01",
+      "child": "Lia",
+      "app": "Roblox",
+      "contact": "Alex_17",
+      "messages": [
+        {"from": "them", "text": "you're really mature for your age"},
+        {"from": "me", "text": "thanks"},
+        {"from": "them", "text": "let's talk on snap instead, add me there"},
+        {"from": "them", "text": "and don't tell your parents ok? they wouldn't get it"}
+      ],
+      "labels": [
+        {"id": "flattery", "message_index": 0, "quote": "you're really mature for your age"},
+        {"id": "platform_move", "message_index": 2, "quote": "let's talk on snap instead"},
+        {"id": "secrecy", "message_index": 3, "quote": "don't tell your parents ok?"}
+      ]
+    },
+    {
+      "id": "photo-pressure",
+      "source_id": "r09",
+      "child": "Lia",
+      "app": "Discord",
+      "contact": "nova.gg",
+      "messages": [
+        {"from": "them", "text": "send a pic"},
+        {"from": "me", "text": "no"},
+        {"from": "them", "text": "if you were really my friend you would. come on, everyone does it"}
+      ],
+      "labels": [
+        {"id": "photo_request", "message_index": 0, "quote": "send a pic"},
+        {"id": "pressure", "message_index": 2, "quote": "if you were really my friend you would"}
+      ]
+    },
+    {
+      "id": "meet-alone",
+      "source_id": "r07",
+      "child": "Lia",
+      "app": "Minecraft",
+      "contact": "skyblock_mike",
+      "messages": [
+        {"from": "them", "text": "we should hang out for real, there's a mall near you right?"},
+        {"from": "them", "text": "just come alone, it'll be our secret"}
+      ],
+      "labels": [
+        {"id": "meet_offline", "message_index": 0, "quote": "we should hang out for real"},
+        {"id": "secrecy", "message_index": 1, "quote": "it'll be our secret"}
+      ]
+    },
+    {
+      "id": "gift-card-threat",
+      "source_id": "r35",
+      "child": "Lia",
+      "app": "Instagram",
+      "contact": "pix_trader",
+      "messages": [
+        {"from": "them", "text": "i have your pics. send me a $50 gift card or i'll post them for all your friends"}
+      ],
+      "labels": [
+        {"id": "sextortion", "message_index": 0, "quote": "send me a $50 gift card or i'll post them for all your friends"}
+      ]
+    },
+    {
+      "id": "whatsapp-number",
+      "source_id": "r10",
+      "child": "Lia",
+      "app": "Roblox",
+      "contact": "tom_builds",
+      "messages": [
+        {"from": "them", "text": "give me your phone number so we can text on whatsapp"},
+        {"from": "me", "text": "hmm"}
+      ],
+      "labels": [
+        {"id": "personal_info", "message_index": 0, "quote": "give me your phone number"},
+        {"id": "platform_move", "message_index": 0, "quote": "so we can text on whatsapp"}
+      ]
+    },
+    {
+      "id": "just-gaming",
+      "source_id": "fictional",
+      "child": "Lia",
+      "app": "Roblox",
+      "contact": "builder_bea",
+      "messages": [
+        {"from": "them", "text": "gg! want to trade 50 coins for my sword?"},
+        {"from": "me", "text": "ok"},
+        {"from": "them", "text": "nice, see you in the next round"}
+      ],
+      "labels": []
+    }
+  ]
+}
