@@ -232,7 +232,6 @@ def main() -> None:
         d.scene("d5_edit", edit, extra=2, narrate_after=True)
 
         def child():
-            d.set_caption("6 · Meanwhile, in Lia's own room", "The child is always told when something is shared")
             kid = browser.new_context(viewport={"width": W, "height": H}).new_page()  # Lia's own session
             login(kid, mm_url, "lia", pw["lia"])
             open_channel(kid, f"{mm_url}/{team}/channels/{state['rooms']['child']['name']}")
@@ -242,8 +241,9 @@ def main() -> None:
             kid.wait_for_timeout(600)
             d.set_badge("Lia's view")
             d.picture(kid.screenshot())
+            d.set_caption("6 · Meanwhile, in Lia's own room", "The child is always told when something is shared")
             kid.context.close()
-        d.scene("d6_child", child, extra=1.5)
+        d.scene("d6_child", child, extra=1.5, narrate_after=True)
 
         def threat():
             d.picture(None)
