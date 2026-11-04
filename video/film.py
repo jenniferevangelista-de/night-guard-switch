@@ -71,6 +71,8 @@ def narr_level(t):
     """Loudness of the narration at time t (drives Snoozy's mouth); None when nobody narrates."""
     for s in timeline().values():
         if s["start"] <= t < s["start"] + s["voice_dur"]:
+            if s.get("who") != "snoozy":
+                return None            # Jennifer is speaking: Snoozy listens
             e = rms_env(str(VOZ / s["voice"])); k = int((t - s["start"]) * 12)
             m = e[k] if 0 <= k < len(e) else 0.0
             return 0.0 if m < 0.12 else min(1.0, m * 1.25)
@@ -452,7 +454,21 @@ def sc_hello(img, d, t):
         text(d, "NIGHT GUARD", 470, 900, 50, NIGHT, "mm", "impact.ttf")
     if t > say("hello", "Best Use"): stamp(img, "WINNER · BEST USE OF BACKBOARD", 1180, 640, -4, RED, 58)
     if t > say("hello", "Flip the Switch"): stamp(img, "FLIP THE SWITCH · TRACK 02", 1180, 820, 3, SWITCH_COL, 58)
-    sloth(img, t, 1700, 1000, 400, narr_level(t) or 0.0, "talk", wave=eio(seg(t, a, a + 0.8)) * (1 - seg(t, a + 3.0, a + 3.8)))
+    k = seg(t, say("hello", "Snoozy"), say("hello", "Snoozy") + 0.6)
+    sloth(img, t, 1700, 1000, 400, 0.0, "listen", wave=eio(k))
+    return img
+
+
+def sc_intro2(img, d, t):
+    """Snoozy introduces himself (the Night Guard film's intro, without the lazy concept)."""
+    a = S("intro")["start"]
+    sloth(img, t, 640, 980, 620, narr_level(t) or 0.0, "talk", wave=eio(seg(t, a, a + 0.8)) * (1 - seg(t, a + 3.0, a + 3.8)))
+    d = ImageDraw.Draw(img)
+    z = eout(seg(t, a + 0.3, a + 0.9))
+    text(d, "SNOOZY", 1240, 260, int(40 + 110 * z), NIGHT, "mm", "impact.ttf")
+    if t > a + 1.6: text(d, "Night Guard's little guard", 1240, 380, 50, INK)
+    if t > say("intro", "kids' chats"): shield(d, t, 1240, 560, 0.45, 1.0, seed=700)
+    if t > say("intro", "own computer"): stamp(img, "WATCHING OVER KIDS", 1240, 760, -5, RED, 60)
     return img
 
 
@@ -592,7 +608,7 @@ def sc_end(img, d, t):
     text(d, 'Music: "Funkorama" Kevin MacLeod (incompetech.com), CC BY 4.0 · opening score: original', W / 2, 1050, 22, SOFT)
 
 
-ORDER = [("hello", sc_hello), ("night", sc_night), ("stat", sc_stat), ("fast", sc_fast), ("guard", sc_guard2),
+ORDER = [("hello", sc_hello), ("intro", sc_intro2), ("night", sc_night), ("stat", sc_stat), ("fast", sc_fast), ("guard", sc_guard2),
          ("results", sc_results), ("alert", sc_alert), ("before", sc_before), ("room", sc_room), ("helper", sc_helper),
          ("decide", sc_decide), ("kid", sc_kid), ("threat", sc_threat), ("beforeafter", sc_beforeafter),
          ("proof", sc_proof), ("end", sc_end)]
@@ -605,7 +621,7 @@ def render(t):
         if t >= (S(sid)["start"] if sid != "hello" else 0): fn = f
     img = fn(img, d, t) or img
     img = dark_overlay(img, seg(t, S("night")["start"] - 0.8, S("night")["start"]) * (1 - seg(t, MUSIC_SWITCH, MUSIC_SWITCH + 1.5)))
-    if fn not in (sc_hello, sc_end):                     # Snoozy, Night Guard's little guard, in the corner
+    if fn not in (sc_hello, sc_intro2, sc_end):          # Snoozy, Night Guard's little guard, in the corner
         m = narr_level(t)
         sloth(img, t, 1825, 1010, 200, m or 0.0, "talk" if m is not None else "listen",
               emo="angry" if S("night")["start"] <= t < MUSIC_SWITCH else "happy")

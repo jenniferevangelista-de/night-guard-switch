@@ -1,6 +1,6 @@
 # How the Night Guard Family Room videos were made
 
-Two videos, in the same format as the [Night Guard videos](https://github.com/jenniferevangelista-de/night-guard/blob/main/docs/VIDEOS.md). Jennifer narrates both in the first person, and Snoozy, Night Guard's little guard, is on screen with her, his mouth moving with the narration. Every chat shown is fictional, and every number is real (Night Guard's evaluation and this repository's tests).
+Two videos, in the same format as the [Night Guard videos](https://github.com/jenniferevangelista-de/night-guard/blob/main/docs/VIDEOS.md). Jennifer opens both as herself (Ava voice, first person). Then Snoozy, Night Guard's little guard, introduces himself and tells the rest as himself (Ava voice, faster and higher, like Shieldy in the Shield film); his mouth moves only on his own lines. Every chat shown is fictional, and every number is real (Night Guard's evaluation and this repository's tests).
 
 | Video | What it is |
 |---|---|
@@ -28,7 +28,7 @@ film_render.py   frames -> ffmpeg -> mp4,                       waits for the ag
 | Reused as it was (in `video/ng/` and the scenes marked in `film.py`) | New for this project |
 |---|---|
 | Snoozy (`ng/ng_sloth.py`), the paper, ink and stick figures (`ng/palito.py`), the props (`ng/ng_film_helpers.py`) | Jennifer's intro (Ava voice, first person) |
-| The film scenes night, stat, fast and alert, with their lines word for word, and the paper style | Jennifer's narration; the scenes hello, guard, results, before, room, helper, decide, kid, threat, before/after, proof and end; the real screenshots in `ng/shots/` |
+| The film scenes intro, night, stat, fast and alert (lines word for word, without the lazy concept), and the paper style | Jennifer's opening; the scenes hello, guard, results, before, room, helper, decide, kid, threat, before/after, proof and end; the real screenshots in `ng/shots/` |
 | The mix: original drama bed until the guard appears, then Funkorama (30%); the app's real spoken warning (ElevenLabs, `ng/audio/`) | Tonal sound effects only (sweep, tick, pop, chime; no noise) |
 | The render (frames piped to ffmpeg, -14 LUFS, 20% faster) and the tour frame (`tour_build.py`) | The tour content: a real Switch + Mattermost run, recorded by `record_demo.py` |
 
@@ -39,7 +39,7 @@ film_render.py   frames -> ffmpeg -> mp4,                       waits for the ag
 | Python 3.12 + Pillow | Every frame of the film and the tour frame (1920x1080, 24 fps) |
 | NumPy + soundfile | The mix and the original drama score |
 | ffmpeg | Encoding, cutting the agent's waits, loudness |
-| edge-tts | Jennifer's voice: `en-US-AvaMultilingualNeural` |
+| edge-tts | `en-US-AvaMultilingualNeural`: Jennifer (-4%) and Snoozy (+6%, +14 Hz) |
 | Playwright + Chromium | Films the real Mattermost on the Switch server |
 | Switch v0.31.0, Mattermost, Ollama + Gemma 3 4B | What the tour shows, running for real on the runner |
 

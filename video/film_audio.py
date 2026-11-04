@@ -82,6 +82,7 @@ def tick(): t = tt(0.05); return np.sin(2 * np.pi * 2400 * t) * np.exp(-t * 120)
 n0 = S("night")["start"] - 1.2
 for t0 in (2.2, 3.8, 5.6, 7.4): add(sfx, n0 + t0, pop())
 add(sfx, S("hello")["start"] + 0.2, chime(1320), 0.8); add(sfx, S("hello")["start"] + 0.35, chime(1760), 0.8)
+add(sfx, S("intro")["start"] + 0.3, chime(1568), 0.8); add(sfx, say("intro", "own computer"), thud(), 0.6)
 add(sfx, say("hello", "Best Use"), thud(), 0.7); add(sfx, say("hello", "Flip the Switch"), thud(), 0.7)
 a = S("stat")["start"]; add(sfx, a + 7.0, thud()); add(sfx, a + 8.6, thud(), 0.7)
 a = S("fast")["start"]

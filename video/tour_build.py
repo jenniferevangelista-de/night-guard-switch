@@ -79,6 +79,8 @@ def talking(t):
     for s in segs:
         n = narr[s["id"]]
         if s["vstart"] <= t < s["vstart"] + n["dur"]:
+            if n["who"] != "snoozy":
+                return None            # Jennifer is speaking: Snoozy listens
             e = env(str(WORK / n["voice"])); k = int((t - s["vstart"]) * 12)
             m = e[k] if 0 <= k < len(e) else 0.0
             return 0.0 if m < 0.12 else min(1.0, m * 1.25)
