@@ -1,0 +1,26 @@
+name: compress the videos for upload
+# Makes 720p copies under 10 MB of the published videos (for upload through a browser).
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  compress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and compress
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          base=https://github.com/${{ github.repository }}/releases/download/videos-v1
+          mkdir -p out
+          for v in film tour; do
+            curl -sfLo $v.mp4 $base/night_guard_family_room_$v.mp4
+            dur=$(ffprobe -v error -show_entries format=duration -of csv=p=0 $v.mp4)
+            kbps=$(python3 -c "print(int(9.3*8*1024/$dur - 96))")
+            ffmpeg -v error -y -i $v.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -b:v ${kbps}k -pass 1 -an -f mp4 /dev/null
+            ffmpeg -v error -y -i $v.mp4 -vf scale=1280:720 -c:v libx264 -preset slow -b:v ${kbps}k -pass 2 -c:a aac -b:a 96k -ar 48000 out/night_guard_family_room_${v}_720p.mp4
+            ls -la out
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compressed
+          path: out/
