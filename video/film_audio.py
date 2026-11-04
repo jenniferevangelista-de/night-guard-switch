@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from film import DUR, FAMILY_AT, FAMILY_FILE, MUSIC_SWITCH, S, SARAH_AT, SARAH_FILE, WORK, say, timeline
+from film import DUR, FAMILY_AT, FAMILY_FILE, MUSIC_SWITCH, S, SARAH_AT, SARAH_FILE, WORK, say, timeline  # noqa: F401
 
 HERE = Path(__file__).resolve().parent
 SR = 48000; N = int(SR * DUR); rng = np.random.default_rng(7)
@@ -76,38 +76,35 @@ def thud(): t = tt(0.35); return np.sin(2 * np.pi * (90 + 120 * np.exp(-t * 25))
 def poofs(): t = tt(0.6); f = 520 - 260 * t / 0.6; return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * t / 0.6) ** 2 * 0.45
 def chime(f0=1320): t = tt(0.6); return sum(np.sin(2 * np.pi * f0 * m * t) / m for m in (1, 2, 3)) * np.exp(-t * 5) * 0.25
 def swish(): t = tt(0.25); f = 500 + 1500 * t / 0.25; return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * t / 0.25) ** 2 * 0.22
-def alarm(): t = tt(0.5); return np.sign(np.sin(2 * np.pi * 660 * t)) * (np.sin(2 * np.pi * 4 * t) > 0) * np.exp(-t * 3) * 0.15
+def alarm(): t = tt(0.5); return np.sin(2 * np.pi * 660 * t) * (np.sin(2 * np.pi * 4 * t) > 0) * np.exp(-t * 3) * 0.15
 def tick(): t = tt(0.05); return np.sin(2 * np.pi * 2400 * t) * np.exp(-t * 120) * 0.4
 
 n0 = S("night")["start"] - 1.2
 for t0 in (2.2, 3.8, 5.6, 7.4): add(sfx, n0 + t0, pop())
-add(sfx, S("hello")["start"] + 0.2, chime(1320), 0.8); add(sfx, S("intro")["start"] + 0.3, chime(1320), 0.8); add(sfx, S("intro")["start"] + 0.45, chime(1760), 0.8)
+add(sfx, S("hello")["start"] + 0.2, chime(1320), 0.8); add(sfx, S("hello")["start"] + 0.35, chime(1760), 0.8)
+add(sfx, say("hello", "Best Use"), thud(), 0.7); add(sfx, say("hello", "Flip the Switch"), thud(), 0.7)
 a = S("stat")["start"]; add(sfx, a + 7.0, thud()); add(sfx, a + 8.6, thud(), 0.7)
 a = S("fast")["start"]
 for i in range(10): add(sfx, a + 0.5 + i * 0.5, tick())
-a = S("platforms")["start"]
-for i in range(4): add(sfx, a + 0.4 + i * 0.7, pop(), 0.6)
-add(sfx, a + 8.6, swish()); add(sfx, a + 9.8, thud(), 0.8)
-a = S("parents")["start"]; add(sfx, a + 2.6, pop())
 a = S("guard")["start"]; add(sfx, a + 1.3, poofs()); add(sfx, a + 1.5, chime(880)); add(sfx, a + 1.65, chime(1320))
+add(sfx, say("guard", "Gemma"), thud(), 0.6)
+for kw in ("thirty six out", "three false", "three and a half", "fourteen"): add(sfx, say("results", kw), chime(1047), 0.7)
 add(sfx, SARAH_AT - 0.8, alarm()); add(sfx, SARAH_AT - 0.3, thud(), 0.6)
-a = S("family")["start"]; add(sfx, a + 2.0, chime(1568)); add(sfx, a + 2.12, chime(2093))
-for t0 in (4.4, 5.4, 6.4): add(sfx, a + t0, pop(), 0.7)
-a = S("after")["start"]; add(sfx, a + 0.3, chime(1568))
-for kw in ("mean", "say", "report"): add(sfx, say("after", kw) - 0.2, pop(), 0.7)
-add(sfx, say("room", "Switch"), poofs(), 0.6); add(sfx, say("room", "Switch") + 1.2, chime(1320))
+add(sfx, S("before")["start"] + 0.2, thud(), 0.8)
+for kw in ("mean", "say", "report"): add(sfx, say("before", kw) - 0.2, tick(), 0.9)
+add(sfx, S("room")["start"] + 0.2, chime(1568)); add(sfx, S("room")["start"] + 0.32, chime(2093))
+add(sfx, say("room", "Switch"), poofs(), 0.6); add(sfx, say("room", "group chat"), swish())
 add(sfx, say("room", "Never"), thud(), 0.6)
-add(sfx, say("helper", "explains"), pop())
-for i in range(4): add(sfx, say("helper", "proposes") + i * 0.5, pop(), 0.6)
+add(sfx, S("helper")["start"] + 0.2, swish()); add(sfx, say("helper", "second and a half"), chime(1320))
 add(sfx, say("helper", "waits"), thud(), 0.8)
-a = S("decide")["start"]; add(sfx, a, pop()); add(sfx, say("decide", "Dad"), pop()); add(sfx, say("decide", "writes"), chime(1320))
-for i in range(5): add(sfx, say("decide", "room document") + i * 0.35, swish(), 0.6)
-add(sfx, say("kid", "not in trouble"), chime(1760))
-add(sfx, S("threat")["start"] + 0.6, pop()); add(sfx, say("threat", "SaferNet"), swish()); add(sfx, say("threat", "NCMEC"), swish())
+add(sfx, S("decide")["start"], swish()); add(sfx, say("decide", "Dad"), swish()); add(sfx, say("decide", "document"), thud(), 0.7)
+add(sfx, S("kid")["start"] + 0.2, swish()); add(sfx, say("kid", "not in trouble"), chime(1760))
+add(sfx, S("threat")["start"] + 0.2, swish()); add(sfx, say("threat", "SaferNet"), pop()); add(sfx, say("threat", "NCMEC"), pop())
 add(sfx, say("threat", "don't pay"), thud())
-for kw in ("Switch agents", "linked rooms", "threads", "targeted", "room documents", "Mattermost", "Gemma", "a test"):
-    add(sfx, say("tech", kw), swish())
-s = S("tech"); add(sfx, s["start"] + s["voice_dur"] - 0.5, thud())
+add(sfx, S("beforeafter")["start"] + 0.2, thud(), 0.7)
+for kw in ("one scary", "alone", "no plan"): add(sfx, say("beforeafter", kw), tick(), 0.9)
+for kw in ("whole family", "clear plan", "kid in"): add(sfx, say("beforeafter", kw), chime(1320), 0.6)
+for kw in ("thirteen", "two agents", "Zero"): add(sfx, say("proof", kw), chime(1047), 0.8)
 a = S("end")["start"]; add(sfx, a, chime(880), 1.0); add(sfx, a + 0.15, chime(1320), 1.0)
 
 # music: drama until the guard arrives, 2 s crossfade into Funkorama

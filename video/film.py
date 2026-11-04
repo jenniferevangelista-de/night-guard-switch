@@ -401,6 +401,7 @@ def sc_peace(img, d, t):
 
 # ------------------------------------------------------------------ new scenes: the Switch family room
 SWITCH_COL = (67, 56, 202)
+SHOTS = HERE / "ng" / "shots"                       # real screenshots of Mattermost on a real Switch run
 
 
 def say(sid, kw):
@@ -409,188 +410,191 @@ def say(sid, kw):
     return s["start"] + s["voice_dur"] * max(0, i) / len(s["line"])
 
 
-def chat_window(d, t, x, y, w, h, title, seed=3000):
-    """A hand-drawn group chat window: dark header with the room name, white body."""
-    wrect(d, x, y, x + w, y + h, t, seed, 7, fill=(255, 252, 242))
-    d.rectangle((x + 6, y + 6, x + w - 6, y + 70), fill=NIGHT)
-    text(d, "# " + title, x + 30, y + 38, 36, WHITE, "lm")
+@lru_cache(maxsize=16)
+def shot(name, width):
+    im = Image.open(SHOTS / f"{name}.png").convert("RGB")
+    return im.resize((width, int(im.height * width / im.width)), Image.LANCZOS)
 
 
-def msg(d, t, x, y, who, s, k, col=INK, who_col=NIGHT, size=32, seed=3100):
+def taped(img, t, name, cx, cy, width, rot=-2.0, k=1.0):
+    """A real screenshot taped on the paper (same look as the Night Guard film)."""
     if k <= 0: return
-    yy = y + (1 - eout(k)) * 30
-    wcircle(d, x + 26, yy + 26, 24, t, seed, 5, fill=who_col)
-    text(d, who, x + 66, yy + 6, 26, who_col, "lm", "impact.ttf")
-    text(d, s, x + 66, yy + 44, size, col, "lm")
+    sh = shot(name, int(width))
+    card = Image.new("RGBA", (sh.width + 28, sh.height + 28), (255, 255, 255, 255))
+    card.paste(sh, (14, 14))
+    ang = rot + (1 - eout(k)) * 8
+    card = card.rotate(ang, expand=True, resample=Image.BICUBIC)
+    shadow = Image.new("RGBA", card.size, (0, 0, 0, 0)); shadow.putalpha(card.split()[3].point(lambda v: v * 0.25))
+    y = cy - card.height / 2 + (1 - eout(k)) * 120
+    img.paste(Image.new("RGB", card.size, (90, 80, 70)), (int(cx - card.width / 2 + 12), int(y + 14)), shadow)
+    img.paste(card, (int(cx - card.width / 2), int(y)), card)
+    a = random.Random(9)
+    for dx, tr in ((-0.42, -18), (0.4, 14)):
+        tape = Image.new("RGBA", (170, 50), (255, 236, 150, 170)).rotate(tr + a.uniform(-3, 3), expand=True)
+        img.paste(tape, (int(cx + dx * card.width - tape.width / 2), int(y + 6 - tape.height / 2)), tape)
+
+
+def big(d, t, x, y, value, label, t0, col=NIGHT, size=150, sub=None):
+    """A big number that pops on the word, with its label (and source) under it."""
+    if t < t0: return
+    z = eout(seg(t, t0, t0 + 0.4))
+    text(d, value, x, y, int(size * (0.4 + 0.6 * z)), col, "mm", "impact.ttf")
+    text(d, label, x, y + size * 0.62, 40, INK)
+    if sub: text(d, sub, x, y + size * 0.62 + 46, 28, SOFT)
 
 
 def sc_hello(img, d, t):
     a = S("hello")["start"]
     z = eout(seg(t, a + 0.2, a + 0.8))
-    text(d, "Jennifer Evangelista", 760, 300, int(40 + 70 * z), NIGHT, "mm", "impact.ttf")
-    if t > a + 1.6: text(d, "data engineering · solutions architecture", 760, 410, 46, INK)
-    if t > a + 2.6: text(d, "Florianópolis, Brazil", 760, 480, 42, SOFT)
+    text(d, "Jennifer Evangelista", W / 2, 230, int(40 + 80 * z), NIGHT, "mm", "impact.ttf")
+    if t > a + 1.6: text(d, "data engineering · solutions architecture", W / 2, 350, 50, INK)
+    if t > a + 2.6: text(d, "Florianópolis, Brazil", W / 2, 420, 44, SOFT)
     if t > say("hello", "Night Guard"):
-        shield(d, t, 380, 720, 0.55, 1.0, seed=640)
-        stamp(img, "BEST USE OF BACKBOARD", 900, 700, -4, RED, 54)
-    if t > say("hello", "Flip the Switch"):
-        stamp(img, "FLIP THE SWITCH · TRACK 02", 900, 860, 3, SWITCH_COL, 54)
-    k = seg(t, say("hello", "Snoozy"), say("hello", "Snoozy") + 0.6)
-    sloth(img, t, 1560, 1000, 520, 0.0, "listen", wave=eio(k))
+        shield(d, t, 470, 700, 0.75, 1.0, seed=640)
+        text(d, "NIGHT GUARD", 470, 900, 50, NIGHT, "mm", "impact.ttf")
+    if t > say("hello", "Best Use"): stamp(img, "WINNER · BEST USE OF BACKBOARD", 1180, 640, -4, RED, 58)
+    if t > say("hello", "Flip the Switch"): stamp(img, "FLIP THE SWITCH · TRACK 02", 1180, 820, 3, SWITCH_COL, 58)
     return img
 
 
-def sc_after(img, d, t):
-    a = S("after")["start"]
-    moon_window(d, t, 120, 120, 420, 400)
-    stick(d, t, (760, 820), 1.15, lean=-4, armL=(110, -70), armR=(70, -110), legL=(105, 90), legR=(75, 90),
+def sc_guard2(img, d, t):
+    a = S("guard")["start"]
+    k = seg(t, a + 0.2, a + 1.4)
+    shield(d, t, 480, 400, 1.2, k if k < 1 else 1.0)
+    poof(d, t, 480, 400, seg(t, a + 1.3, a + 2.0))
+    if t > a + 1.4:
+        z = eout(seg(t, a + 1.4, a + 1.9))
+        text(d, "NIGHT GUARD", 480, 670, int(40 + 70 * z), NIGHT, "mm", "impact.ttf")
+    if t > say("guard", "kid's computer"):
+        x, y = 900, 200
+        wrect(d, x, y, x + 300, y + 180, t, 1400, 7, fill=(225, 238, 255))
+        wline(d, [(x - 30, y + 200), (x + 330, y + 200)], t, 1401, 8)
+        text(d, "on the kid's", x + 360, y + 70, 44, INK, "lm"); text(d, "own computer", x + 360, y + 125, 44, INK, "lm")
+    if t > say("guard", "Gemma"): stamp(img, "GEMMA · OPEN MODEL", 1240, 560, -3, NIGHT, 60)
+    if t > say("guard", "never leaves"): text(d, "the chat never leaves home", 1240, 760, 56, GREEN, "mm", "impact.ttf")
+
+
+def sc_results(img, d, t):
+    big(d, t, 480, 250, "36/36", "risky chats caught", say("results", "thirty six out"), RED)
+    big(d, t, 1440, 250, "3/34", "false alarms on safe chats", say("results", "three false"), NIGHT)
+    big(d, t, 480, 650, "~3.4 s", "per check, on the computer", say("results", "three and a half"), NIGHT)
+    big(d, t, 1440, 650, "14", "grooming tactics it knows", say("results", "fourteen"), RED)
+    text(d, "Night Guard evaluation · 70 fictional chats · Gemma 4 E4B, local", W / 2, 950, 32, SOFT)
+
+
+def sc_before(img, d, t):
+    a = S("before")["start"]
+    stamp(img, "BEFORE", 300, 150, -6, RED, 90)
+    moon_window(d, t, 120, 260, 420, 540)
+    stick(d, t, (760, 840), 1.15, lean=-4, armL=(110, -70), armR=(70, -110), legL=(105, 90), legR=(75, 90),
           mood="sad", look=0.5, seed=210)
-    phone(d, t, 780, 220, seg(t, a + 0.3, a + 0.7), ["HIGH risk · Roblox", "asked to keep a secret"])
+    phone(d, t, 820, 200, seg(t, say("before", "one alert"), say("before", "one alert") + 0.4),
+          ["HIGH risk · Roblox", "asked to keep a secret"])
+    text(d, "23:07", 1060, 960, 46, INK)
     qs = [("What does it mean?", "mean"), ("What do I say?", "say"), ("Where do I report it?", "report")]
     for i, (q, kw) in enumerate(qs):
-        t0 = say("after", kw)
+        t0 = say("before", kw)
         if t > t0 - 0.2:
-            text(d, "?", 1330, 260 + i * 170, int(60 + 50 * eout(seg(t, t0 - 0.2, t0 + 0.2))), RED, "mm", "impact.ttf")
-            text(d, q, 1390, 260 + i * 170, 44, INK, "lm")
-    if t > say("after", "alone"): text(d, "alone, at night", 1560, 800, 50, RED, "mm", "impact.ttf")
+            text(d, "?", 1360, 300 + i * 170, int(60 + 50 * eout(seg(t, t0 - 0.2, t0 + 0.2))), RED, "mm", "impact.ttf")
+            text(d, q, 1410, 300 + i * 170, 42, INK, "lm")
+    if t > say("before", "alone"): text(d, "alone", 1650, 840, 64, RED, "mm", "impact.ttf")
+    return dark_overlay(img, 0.6)
 
 
 def sc_room(img, d, t):
-    a = S("room")["start"]
-    wrect(d, 90, 330, 450, 560, t, 3200, 7, fill=(225, 238, 255))              # the kid's computer
-    wline(d, [(60, 580), (480, 580)], t, 3201, 8)
-    shield(d, t, 270, 445, 0.4, 1.0, seed=660)
-    text(d, "the kid's computer", 270, 640, 38, INK)
-    k = eout(seg(t, say("room", "Switch") - 0.2, say("room", "Switch") + 0.3))   # Switch in the middle
+    stamp(img, "AFTER · WITH SWITCH", 380, 130, -5, GREEN, 72)
+    wrect(d, 90, 380, 400, 580, t, 3200, 7, fill=(225, 238, 255))              # the kid's computer
+    shield(d, t, 245, 480, 0.35, 1.0, seed=660)
+    text(d, "the kid's computer", 245, 640, 36, INK)
+    k = eout(seg(t, say("room", "Switch") - 0.2, say("room", "Switch") + 0.3))
     if k > 0:
-        wrect(d, 700 - 170 * k, 360, 700 + 170 * k, 530, t, 3210, 8, fill=SWITCH_COL)
-        if k > 0.7: text(d, "SWITCH", 700, 445, 70, WHITE, "mm", "impact.ttf")
-        text(d, "agents · rooms · documents", 700, 600, 32, SOFT)
-    chat_window(d, t, 1060, 150, 760, 520, "family-safety", 3220)               # the family's group chat
-    stick(d, t, (1260, 950), 0.6, armL=(120, -40), armR=(60, -80), legL=(105, 90), legR=(75, 90), seed=230)
-    stick(d, t, (1620, 950), 0.6, armL=(120, -40), armR=(60, -80), legL=(105, 90), legR=(75, 90), seed=240)
-    text(d, "mom", 1260, 720, 30, SOFT); text(d, "dad", 1620, 720, 30, SOFT)
-    tr = seg(t, a + 0.8, say("room", "Switch") + 1.4)                          # the alert travels
-    if 0 < tr < 1:
-        x = 450 + (1060 - 450) * eio(tr); y = 445 - 60 * math.sin(math.pi * tr)
-        wrect(d, x - 90, y - 40, x + 90, y + 40, t, 3230, 5, fill=MOON)
-        text(d, "alert", x, y, 34, INK)
-    if tr >= 1:
-        msg(d, t, 1090, 250, "night-guard", "HIGH · Roblox · Alex_17", 1, RED, NIGHT, 32, 3240)
-        text(d, '"don\'t tell your parents ok?"', 1156, 350, 32, INK, "lm")
-    if t > say("room", "Never"):                                                # the whole chat stays home
-        for i in range(5):
-            wrect(d, 120 + i * 14, 700 + i * 16, 420 + i * 14, 740 + i * 16, t, 3250 + i, 4, fill=WHITE)
-        wline(d, [(100, 690), (460, 800)], t, 3260, 9, RED); wline(d, [(100, 800), (460, 690)], t, 3261, 9, RED)
-        text(d, "never the chat", 290, 860, 44, RED, "mm", "impact.ttf")
+        wrect(d, 560 - 130 * k, 410, 560 + 130 * k, 550, t, 3210, 8, fill=SWITCH_COL)
+        if k > 0.7: text(d, "SWITCH", 560, 480, 60, WHITE, "mm", "impact.ttf")
+    taped(img, t, "alert", 1330, 470, 1060, -1.5, seg(t, say("room", "group chat"), say("room", "group chat") + 0.5))
+    if t > say("room", "Never"):
+        stamp(img, "ONLY THE FLAGGED PHRASE", 1270, 900, 3, RED, 56)
 
 
 def sc_helper(img, d, t):
-    chat_window(d, t, 120, 90, 1300, 860, "family-safety · thread", 3300)
-    msg(d, t, 160, 190, "night-guard", "HIGH · Roblox · \"don't tell your parents ok?\"", 1, INK, NIGHT, 30, 3310)
-    t0 = say("helper", "explains")
-    msg(d, t, 160, 300, "family-helper", "What this means: asking a child to hide a chat is a grooming sign.",
-        seg(t, t0 - 0.2, t0 + 0.3), INK, SWITCH_COL, 30, 3320)
-    steps = ["Send Lia a calm note: not in trouble", "Talk with Lia today, without punishment",
-             "Keep the evidence before blocking", "Block and report Alex_17 on Roblox"]
-    t1 = say("helper", "proposes")
-    for i, s in enumerate(steps):
-        if t > t1 + i * 0.5:
-            wrect(d, 230, 420 + i * 90 - 22, 274, 420 + i * 90 + 22, t, 3330 + i, 5, fill=WHITE)
-            text(d, f"{i + 1}. {s}", 300, 420 + i * 90, 36, INK, "lm")
-    if t > say("helper", "waits"): stamp(img, "WAITING FOR A PARENT", 1080, 840, -5, RED, 60)
-    if t > say("helper", "Only"): text(d, "only mom or dad decide", 1660, 300, 40, NIGHT, "mm", "impact.ttf")
+    taped(img, t, "plan", 640, 500, 1100, 2.0, seg(t, S("helper")["start"] + 0.2, S("helper")["start"] + 0.7))
+    if t > say("helper", "second and a half"): big(ImageDraw.Draw(img), t, 1520, 300, "~1.5 s", "alert to plan",
+                                                   say("helper", "second and a half"), SWITCH_COL, 130, "fixed texts")
+    if t > say("helper", "waits"): stamp(img, "WAITING FOR A PARENT", 1500, 720, -5, RED, 56)
+    if t > say("helper", "Only"): text(ImageDraw.Draw(img), "only mom or dad decide", 1500, 880, 44, NIGHT, "mm", "impact.ttf")
 
 
 def sc_decide(img, d, t):
     a = S("decide")["start"]
-    chat_window(d, t, 80, 80, 1000, 640, "family-safety · thread", 3400)
-    msg(d, t, 120, 180, "mom", "approve 1 3 4", seg(t, a, a + 0.4), INK, (200, 80, 120), 36, 3410)
-    t1 = say("decide", "Dad")
-    msg(d, t, 120, 300, "dad", "edit 2: she's 10, keep it short", seg(t, t1, t1 + 0.4), INK, (40, 130, 120), 36, 3420)
-    t2 = say("decide", "writes")
-    msg(d, t, 120, 420, "family-helper", "Step 2, talk script: \"Lia, we love you so much...\"", seg(t, t2, t2 + 0.4),
-        INK, SWITCH_COL, 30, 3430)
-    docs = ["note to Lia", "evidence checklist", "report text", "talk script", "case note"]
-    t3 = say("decide", "room document")
-    for i, s in enumerate(docs):
-        k = seg(t, t3 + i * 0.35, t3 + i * 0.35 + 0.3)
-        if k <= 0: continue
-        x, y = 1180 + (i % 2) * 330, 140 + (i // 2) * 250 + (1 - eout(k)) * 40
-        wrect(d, x, y, x + 290, y + 200, t, 3440 + i, 6, fill=WHITE)
-        for j in range(3): wline(d, [(x + 30, y + 110 + j * 28), (x + 250 - j * 40, y + 110 + j * 28)], t, 3450 + i * 5 + j, 4, SOFT)
-        text(d, s, x + 145, y + 50, 30, NIGHT, "mm", "impact.ttf")
-    t4 = say("decide", "case note")
-    if t > t4: check(d, t, 160, 830, seg(t, t4, t4 + 0.3), "who decided what, and when", 3460)
+    taped(img, t, "approve", 520, 430, 760, -2.5, seg(t, a, a + 0.5))
+    taped(img, t, "talk", 1360, 560, 900, 2.0, seg(t, say("decide", "Dad"), say("decide", "Dad") + 0.5))
+    if t > say("decide", "document"): stamp(img, "SAVED IN THE ROOM", 560, 930, -4, GREEN, 56)
 
 
 def sc_kid(img, d, t):
-    a = S("kid")["start"]; t1 = say("kid", "not in trouble")
-    stick(d, t, (420, 820), 1.0, lean=4, armL=(60, -40), armR=(40, -60), legL=(105, 90), legR=(75, 90),
-          mood="happy" if t > t1 else "normal", look=0.6, seed=260)
-    wrect(d, 560, 560, 820, 720, t, 3500, 7, fill=(225, 238, 255))
-    chat_window(d, t, 960, 180, 860, 520, "lia-night-guard", 3510)
-    shield(d, t, 1040, 340, 0.25, 1.0, seed=680)
-    if t > a + 0.6:
-        text(d, "Hi Lia, it's Night Guard.", 1100, 310, 34, INK, "lm")
-        text(d, "Your family saw what I shared.", 1100, 360, 34, INK, "lm")
-    if t > t1 - 0.3:
-        text(d, "You're NOT in trouble.", 1100, 450, 50, GREEN, "lm", "impact.ttf")
-        text(d, "They want to talk calmly today.", 1100, 530, 34, INK, "lm")
-    if t > say("kid", "always"): text(d, "the kid is always told", 560, 260, 46, NIGHT, "mm", "impact.ttf")
+    a = S("kid")["start"]
+    taped(img, t, "lia", 1180, 500, 1100, -1.5, seg(t, a + 0.2, a + 0.7))
+    stick(d, t, (260, 860), 1.0, lean=4, armL=(60, -40), armR=(40, -60), legL=(105, 90), legR=(75, 90),
+          mood="happy" if t > say("kid", "not in trouble") else "normal", look=0.6, seed=260)
+    text(d, "Lia", 260, 520, 44, NIGHT, "mm", "impact.ttf")
+    if t > say("kid", "not in trouble"): stamp(img, "YOU'RE NOT IN TROUBLE", 1180, 960, 3, GREEN, 60)
 
 
 def sc_threat(img, d, t):
     a = S("threat")["start"]
-    phone(d, t, 120, 140, seg(t, a + 0.2, a + 0.6), ["HIGH risk · Instagram", "threat, money demand"])
-    bubble(d, t, 680, 200, "send me a $50 gift card or i'll post them", 3600, seg(t, a + 0.6, a + 1.0), who="pix_trader", size=34)
+    taped(img, t, "threat", 560, 500, 1000, -2.0, seg(t, a + 0.2, a + 0.7))
     t1 = say("threat", "SaferNet")
     for i, (n, sub) in enumerate([("SAFERNET", "Brasil"), ("NCMEC", "CyberTipline")]):
         if t > t1 + i * 0.5:
-            x = 720 + i * 520
-            wrect(d, x, 420, x + 440, 620, t, 3610 + i, 7, fill=(255, 252, 242))
-            text(d, n, x + 220, 490, 64, NIGHT, "mm", "impact.ttf"); text(d, sub, x + 220, 570, 36, SOFT)
-    if t > say("threat", "don't pay"): stamp(img, "DON'T PAY", 1200, 790, -6, RED, 96)
-    if t > say("threat", "fixed"): text(d, "fixed text · never improvised", 1200, 940, 40, INK)
+            x = 1180 + i * 360
+            wrect(d, x, 200, x + 320, 380, t, 3610 + i, 7, fill=(255, 252, 242))
+            text(d, n, x + 160, 265, 54, NIGHT, "mm", "impact.ttf"); text(d, sub, x + 160, 335, 32, SOFT)
+    if t > say("threat", "don't pay"): stamp(img, "DON'T PAY", 1520, 560, -6, RED, 110)
+    if t > say("threat", "fixed"): text(d, "fixed text · never improvised", 1520, 760, 44, INK)
 
 
-def sc_tech(img, d, t):
-    s = S("tech")
-    cards = [("Switch agents", "2 AGENTS", "night-guard", "family-helper", SWITCH_COL),
-             ("linked rooms", "2 ROOMS", "family-safety", "lia-night-guard", NIGHT),
-             ("threads", "THREADS", "one case per alert", "parents reply there", (90, 90, 200)),
-             ("targeted", "MENTIONS", "@family-helper", "@mom @dad", (200, 120, 30)),
-             ("room documents", "DOCUMENTS", "alert, steps, case note", "saved in the room", GREEN),
-             ("Mattermost", "MATTERMOST", "bundled with Switch", "a normal chat app", (30, 90, 160)),
-             ("Gemma", "GEMMA", "writes the texts", "on the family's machine", RED),
-             ("a test", "REAL TEST", "real Switch, every push", "privacy checked", (120, 70, 160))]
-    for i, (kw, ti, l1, l2, col) in enumerate(cards):
-        t0 = say("tech", kw)
-        x = 82 + (i % 4) * 444; y = 120 + (i // 4) * 400
-        card_tiny(d, t, x, y, seg(t, t0, t0 + 0.4), ti, l1, l2, col, 3700 + i * 20)
-    if t > s["start"] + s["voice_dur"] - 0.5:
-        stamp(img, "SWITCH IN THE MIDDLE", W / 2, 470, -4, RED, 76)
+def sc_beforeafter(img, d, t):
+    a = S("beforeafter")["start"]
+    d.line([(W / 2, 120), (W / 2, 900)], fill=INK, width=6)
+    stamp(img, "BEFORE", W / 4, 160, -4, RED, 80)
+    if t > say("beforeafter", "After"): stamp(img, "AFTER", 3 * W / 4, 160, 4, GREEN, 80)
+    before = [("one scary alert", "one scary"), ("a parent alone", "alone"), ("no plan", "no plan")]
+    after = [("the whole family", "whole family"), ("a clear plan", "clear plan"), ("the kid in the loop", "kid in")]
+    for i, (s, kw) in enumerate(before):
+        t0 = say("beforeafter", kw)
+        if t > t0:
+            y = 360 + i * 170
+            wline(d, [(160, y - 20), (200, y + 20)], t, 3800 + i, 8, RED); wline(d, [(160, y + 20), (200, y - 20)], t, 3810 + i, 8, RED)
+            text(d, s, 240, y, 52, INK, "lm")
+    for i, (s, kw) in enumerate(after):
+        t0 = say("beforeafter", kw)
+        if t > t0 - 0.2:
+            y = 360 + i * 170
+            check(d, t, 1060, y, seg(t, t0 - 0.2, t0 + 0.1), "", 3820 + i)
+            text(d, s, 1140, y, 52, INK, "lm")
+
+
+def sc_proof(img, d, t):
+    big(d, t, 480, 230, "13", "end-to-end checks on a real Switch", say("proof", "thirteen"), RED, 170, "every push · GitHub Actions")
+    big(d, t, 1440, 230, "2 + 2", "agents and linked rooms", say("proof", "two agents"), SWITCH_COL, 170)
+    big(d, t, W / 2, 620, "0", "lines of the private chat reach the parents", say("proof", "Zero"), GREEN, 220,
+        "checked on every run · 17 unit tests too")
 
 
 def sc_end(img, d, t):
-    a = S("end")["start"]; vend = a + S("end")["voice_dur"]
-    m = narr_level(t)
-    mood = "talk" if m is not None else ("yawn" if t < vend + 1.0 else "sleep")
-    sloth(img, t, 1720, 990, 340, m or 0.0, mood)
-    d = ImageDraw.Draw(img)
-    shield(d, t, W / 2, 250, 0.8, 1.0)
+    a = S("end")["start"]
+    shield(d, t, W / 2, 230, 0.8, 1.0)
     z = eout(seg(t, a, a + 0.5))
-    text(d, "Night Guard Family Room", W / 2, 500, int(50 + 60 * z), NIGHT, "mm", "impact.ttf")
-    if t > a + 1.0: text(d, "a partner for parents · a friend for kids · a plan for the family", W / 2, 610, 46, INK)
-    if t > a + 2.4: text(d, "github.com/jenniferevangelista-de/night-guard-switch", W / 2, 710, 46, RED)
-    if t > a + 3.0: text(d, "Jennifer Evangelista · Switch · Mattermost · Gemma · Night Guard", W / 2, 800, 34, SOFT)
+    text(d, "Night Guard Family Room", W / 2, 480, int(50 + 60 * z), NIGHT, "mm", "impact.ttf")
+    if t > a + 1.0: text(d, "a partner for parents · a friend for kids · a plan for the whole family", W / 2, 600, 44, INK)
+    if t > a + 2.4: text(d, "github.com/jenniferevangelista-de/night-guard-switch", W / 2, 700, 46, RED)
+    if t > a + 3.0: text(d, "Jennifer Evangelista · Switch · Mattermost · Gemma · Night Guard", W / 2, 790, 34, SOFT)
     text(d, 'Music: "Funkorama" Kevin MacLeod (incompetech.com), CC BY 4.0 · opening score: original', W / 2, 1050, 22, SOFT)
 
 
-ORDER = [("hello", sc_hello), ("intro", sc_intro), ("night", sc_night), ("stat", sc_stat), ("fast", sc_fast),
-         ("platforms", sc_platforms), ("parents", sc_parents), ("guard", sc_guard), ("alert", sc_alert), ("family", sc_family),
-         ("after", sc_after), ("room", sc_room), ("helper", sc_helper), ("decide", sc_decide), ("kid", sc_kid),
-         ("threat", sc_threat), ("tech", sc_tech), ("peace", sc_peace), ("end", sc_end)]
+ORDER = [("hello", sc_hello), ("night", sc_night), ("stat", sc_stat), ("fast", sc_fast), ("guard", sc_guard2),
+         ("results", sc_results), ("alert", sc_alert), ("before", sc_before), ("room", sc_room), ("helper", sc_helper),
+         ("decide", sc_decide), ("kid", sc_kid), ("threat", sc_threat), ("beforeafter", sc_beforeafter),
+         ("proof", sc_proof), ("end", sc_end)]
 
 
 def render(t):
@@ -600,10 +604,6 @@ def render(t):
         if t >= (S(sid)["start"] if sid != "hello" else 0): fn = f
     img = fn(img, d, t) or img
     img = dark_overlay(img, seg(t, S("night")["start"] - 0.8, S("night")["start"]) * (1 - seg(t, MUSIC_SWITCH, MUSIC_SWITCH + 1.5)))
-    if fn not in (sc_hello, sc_intro, sc_end):            # Snoozy narrates from the corner
-        m = narr_level(t)
-        sloth(img, t, 1825, 1010, 200, m or 0.0, "talk" if m is not None else "listen",
-              emo="angry" if S("night")["start"] <= t < MUSIC_SWITCH else "happy")
     if fn is not sc_end: subtitle(ImageDraw.Draw(img), t)
     if t < 1.0: img = Image.blend(Image.new("RGB", img.size, (0, 0, 0)), img, t)    # fade in from black
     return img

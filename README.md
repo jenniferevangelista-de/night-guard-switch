@@ -132,7 +132,7 @@ The transcript of each run is uploaded as an artifact.
 
 | Pre-existing (Night Guard, before 04/11/2026) | Built during the hackathon (04/11 to 07/11/2026) |
 |---|---|
-| [`nightguard/signals.py`](nightguard/signals.py): the 13 risk signals, the kid and parent wording and their sources (verbatim) | Everything in [`family_room/`](family_room): the Switch agent protocol client, both agents, the approval workflow, the step writers, setup and the end-to-end check |
+| [`nightguard/signals.py`](nightguard/signals.py): the 14 risk signals, the kid and parent wording and their sources (verbatim) | Everything in [`family_room/`](family_room): the Switch agent protocol client, both agents, the approval workflow, the step writers, setup and the end-to-end check |
 | [`nightguard/detector.py`](nightguard/detector.py): the classifier prompt, schema, evidence checks and severity (verbatim; the model call moved to `family_room/detect.py`) | `scripts/`, the GitHub Actions workflows, the tests, this README and the videos (`video/`: recorded with Playwright on a real Switch, narrated with edge-tts) |
 | [`nightguard/family.py`](nightguard/family.py): the family rules (`apply_rules`, no longer writes a local file) | The Switch setup: rooms, documents, linked rooms, agent registration |
 | [`video/ng/`](video/ng): the drawing helpers, narrator and audio of the Night Guard films, reused for these videos ([how](docs/VIDEOS.md)) | |

@@ -21,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 WORK, OUT = HERE / "work", HERE / "out"
 sys.path.insert(0, str(HERE / "ng"))
 from palito import INK, font, paper, text  # noqa: E402
-from ng_sloth import sloth  # noqa: E402
+from ng_film_helpers import shield  # noqa: E402
 
 W, H, FPS, SR = 1920, 1080, 24, 48000
 FX, FY, FW, FH = 40, 108, 1536, 864                    # where the recording sits (16:9)
@@ -126,9 +126,8 @@ def frame(t):
     text(d, f"{idx}/{len(segs)}", cx, 150, 40, SOFT)
     for i, ln in enumerate(textwrap.wrap(narr[sid]["title"], 11)):
         text(d, ln, cx, 220 + i * 66, 60, NIGHT, "mm", "impact.ttf")
-    m = talking(t)
-    sloth(im, t, cx, 1000, 330, m or 0.0, "talk" if m is not None else "listen")
-    d = ImageDraw.Draw(im)
+    shield(d, t, cx, 760, 0.85, 1.0, seed=500)   # Night Guard's shield watches the run
+    text(d, "a real run", cx, 1000, 34, SOFT)
     for a, b, s, _ in SUBS:
         if a <= t < b:
             f = font("segoeprb.ttf", 38)
@@ -158,7 +157,7 @@ def mix():
     kern = SR // 4; c = np.cumsum(np.concatenate([np.zeros(kern), (np.abs(voice) > 0.02).astype(float)]))
     duck = 1 - 0.65 * np.clip((c[kern:] - c[:-kern]) / kern * 3, 0, 1)
     fade = np.ones(N); fade[int((DUR - 2) * SR):] = np.linspace(1, 0, N - int((DUR - 2) * SR))
-    out = voice + music * 0.15 * duck * fade
+    out = voice + music * 0.30 * duck * fade   # Funkorama at 30%, ducked under the voice
     out = np.tanh(out * 0.9) / np.tanh(0.9); out = out / np.abs(out).max() * 0.95
     sf.write(WORK / "_tour_mix.wav", np.stack([out, out], 1), SR)
 
