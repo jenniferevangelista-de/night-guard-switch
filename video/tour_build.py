@@ -21,7 +21,7 @@ HERE = Path(__file__).resolve().parent
 WORK, OUT = HERE / "work", HERE / "out"
 sys.path.insert(0, str(HERE / "ng"))
 from palito import INK, font, paper, text  # noqa: E402
-from ng_film_helpers import shield  # noqa: E402
+from ng_sloth import sloth  # noqa: E402
 
 W, H, FPS, SR = 1920, 1080, 24, 48000
 FX, FY, FW, FH = 40, 108, 1536, 864                    # where the recording sits (16:9)
@@ -75,12 +75,10 @@ def env(path):
 
 
 def talking(t):
-    """Snoozy's mouth: the loudness of his own lines (closed while Jennifer speaks)."""
+    """Snoozy's mouth follows the narration loudness (closed in the pauses)."""
     for s in segs:
         n = narr[s["id"]]
         if s["vstart"] <= t < s["vstart"] + n["dur"]:
-            if n["who"] != "snoozy":
-                return None
             e = env(str(WORK / n["voice"])); k = int((t - s["vstart"]) * 12)
             m = e[k] if 0 <= k < len(e) else 0.0
             return 0.0 if m < 0.12 else min(1.0, m * 1.25)
@@ -126,8 +124,9 @@ def frame(t):
     text(d, f"{idx}/{len(segs)}", cx, 150, 40, SOFT)
     for i, ln in enumerate(textwrap.wrap(narr[sid]["title"], 11)):
         text(d, ln, cx, 220 + i * 66, 60, NIGHT, "mm", "impact.ttf")
-    shield(d, t, cx, 760, 0.85, 1.0, seed=500)   # Night Guard's shield watches the run
-    text(d, "a real run", cx, 1000, 34, SOFT)
+    m = talking(t)                               # Snoozy, Night Guard's little guard, beside the run
+    sloth(im, t, cx, 1000, 330, m or 0.0, "talk" if m is not None else "listen")
+    d = ImageDraw.Draw(im)
     for a, b, s, _ in SUBS:
         if a <= t < b:
             f = font("segoeprb.ttf", 38)

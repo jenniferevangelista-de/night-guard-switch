@@ -70,8 +70,6 @@ VOZ = WORK / "film_voice"
 def narr_level(t):
     """Loudness of the narration at time t (drives Snoozy's mouth); None when nobody narrates."""
     for s in timeline().values():
-        if s.get("who") == "jenni":
-            continue
         if s["start"] <= t < s["start"] + s["voice_dur"]:
             e = rms_env(str(VOZ / s["voice"])); k = int((t - s["start"]) * 12)
             m = e[k] if 0 <= k < len(e) else 0.0
@@ -454,6 +452,7 @@ def sc_hello(img, d, t):
         text(d, "NIGHT GUARD", 470, 900, 50, NIGHT, "mm", "impact.ttf")
     if t > say("hello", "Best Use"): stamp(img, "WINNER · BEST USE OF BACKBOARD", 1180, 640, -4, RED, 58)
     if t > say("hello", "Flip the Switch"): stamp(img, "FLIP THE SWITCH · TRACK 02", 1180, 820, 3, SWITCH_COL, 58)
+    sloth(img, t, 1700, 1000, 400, narr_level(t) or 0.0, "talk", wave=eio(seg(t, a, a + 0.8)) * (1 - seg(t, a + 3.0, a + 3.8)))
     return img
 
 
@@ -582,6 +581,8 @@ def sc_proof(img, d, t):
 
 def sc_end(img, d, t):
     a = S("end")["start"]
+    sloth(img, t, 1720, 990, 340, narr_level(t) or 0.0, "talk", wave=eio(seg(t, a + 3.0, a + 3.6)))
+    d = ImageDraw.Draw(img)
     shield(d, t, W / 2, 230, 0.8, 1.0)
     z = eout(seg(t, a, a + 0.5))
     text(d, "Night Guard Family Room", W / 2, 480, int(50 + 60 * z), NIGHT, "mm", "impact.ttf")
@@ -604,6 +605,10 @@ def render(t):
         if t >= (S(sid)["start"] if sid != "hello" else 0): fn = f
     img = fn(img, d, t) or img
     img = dark_overlay(img, seg(t, S("night")["start"] - 0.8, S("night")["start"]) * (1 - seg(t, MUSIC_SWITCH, MUSIC_SWITCH + 1.5)))
+    if fn not in (sc_hello, sc_end):                     # Snoozy, Night Guard's little guard, in the corner
+        m = narr_level(t)
+        sloth(img, t, 1825, 1010, 200, m or 0.0, "talk" if m is not None else "listen",
+              emo="angry" if S("night")["start"] <= t < MUSIC_SWITCH else "happy")
     if fn is not sc_end: subtitle(ImageDraw.Draw(img), t)
     if t < 1.0: img = Image.blend(Image.new("RGB", img.size, (0, 0, 0)), img, t)    # fade in from black
     return img
