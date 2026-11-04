@@ -4,6 +4,19 @@
 
 Flip the Switch hackathon, Track 02: Best Personal or Creative Workflow.
 
+## 📺 Watch it
+
+| Film (2:41) | Tour of a real run (1:29) |
+|---|---|
+| [![Night Guard Family Room, the film](https://img.youtube.com/vi/xHsc6hbwh64/hqdefault.jpg)](https://youtu.be/xHsc6hbwh64) | [![Night Guard Family Room, a real run on Switch](https://img.youtube.com/vi/ptI3983ParM/hqdefault.jpg)](https://youtu.be/ptI3983ParM) |
+| The problem, a **before and after** of the family's night, and real screenshots of the agents at work | Switch v0.31.0 + Mattermost + both agents + Gemma, running for real |
+
+| **36/36** | **3/34** | **~1.5 s** | **13** | **0** |
+|:-:|:-:|:-:|:-:|:-:|
+| risky chats caught by Night Guard | false alarms on safe chats | from alert to plan in the family room | end-to-end checks on a real Switch, every push | lines of the private chat that reach the parents |
+
+<sub>Night Guard numbers: its evaluation on 70 fictional chats with Gemma 4 E4B ([night-guard README](https://github.com/jenniferevangelista-de/night-guard#readme)). The rest: this repository's [end-to-end check](.github/workflows/e2e.yml). HD files in the [release](https://github.com/jenniferevangelista-de/night-guard-switch/releases/tag/videos-v1); how the videos were made: [docs/VIDEOS.md](docs/VIDEOS.md).</sub>
+
 [Night Guard](https://github.com/jenniferevangelista-de/night-guard) runs on a child's computer with Gemma and spots grooming tactics in game and app chats (secrecy, photo requests, moving to a private app, threats). It already decided *what* the family is told: the risk type, the app, the contact and the flagged phrase, never the whole chat, and the child is always told when something is shared.
 
 What it never had is the part after the alert. A parent gets a scary notification at night and has to figure out, alone, what it means and what to do. This project makes that a short conversation in the family's group chat:
@@ -12,8 +25,6 @@ What it never had is the part after the alert. A parent gets a scary notificatio
 2. **family-helper** explains the risk in plain words and proposes numbered steps.
 3. **A parent approves, edits or skips** each step in the thread. Nothing is written or sent before that, and only a parent can decide.
 4. **family-helper carries them out**: the talk script, the evidence checklist, the report text for the app, the SaferNet / NCMEC guide when there are image requests or threats, and a calm note to the child in the child's own room. Every output is saved as a Switch room document, and a case note keeps the timeline of who decided what.
-
-> 📺 Demo video: _link coming_ · Explainer: _link coming_
 
 ## How it looks
 
