@@ -448,7 +448,6 @@ def sc_hello(img, d, t):
     z = eout(seg(t, a + 0.2, a + 0.8))
     text(d, "Jennifer Evangelista", W / 2, 230, int(40 + 80 * z), NIGHT, "mm", "impact.ttf")
     if t > a + 1.6: text(d, "data engineering · solutions architecture", W / 2, 350, 50, INK)
-    if t > a + 2.6: text(d, "Florianópolis, Brazil", W / 2, 420, 44, SOFT)
     if t > say("hello", "Night Guard"):
         shield(d, t, 470, 700, 0.75, 1.0, seed=640)
         text(d, "NIGHT GUARD", 470, 900, 50, NIGHT, "mm", "impact.ttf")

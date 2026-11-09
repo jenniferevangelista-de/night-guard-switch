@@ -21,7 +21,7 @@ SNOOZY = ("en-US-AvaMultilingualNeural", "+6%", "+14Hz")   # Snoozy, Night Guard
 
 # scene id, voice, narration, extra seconds after the line
 SCENES = [
-    ("hello", JENNI, "Hi, I'm Jennifer Evangelista, a data engineering and solutions architecture specialist from Brazil. "
+    ("hello", JENNI, "Hi, I'm Jennifer Evangelista, a data engineering and solutions architecture specialist. "
                      "I built Night Guard, a child-safety app that runs on the family's own computer, and it won Best Use "
                      "of Backboard. For Flip the Switch, I gave it a family room. Snoozy will show you.", 0.8),
     ("intro", SNOOZY, "Hi! I'm Snoozy, Night Guard's little guard. I watch over kids' chats, right on their own computer.", 0.8),
